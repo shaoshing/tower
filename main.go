@@ -4,11 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/howeyc/fsnotify"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 )
 
 const (
@@ -17,6 +20,7 @@ const (
 )
 
 var serverPort = flag.String("port", "5000", "web service address")
+var mainFile string
 
 func main() {
 	flag.Parse()
@@ -24,9 +28,8 @@ func main() {
 	if len(args) != 1 {
 		fmt.Println("Error: you must specify the main file.")
 	} else {
-		mainFile := args[0]
-		must(buildServer(mainFile))
-		must(startServer())
+		mainFile = args[0]
+		must(watchServerDir())
 		must(startProxyServer())
 	}
 }
@@ -37,7 +40,7 @@ func must(err error) {
 	}
 }
 
-func buildServer(mainFile string) error {
+func buildServer() error {
 	fmt.Println("Building Server")
 	out, _ := exec.Command("go", "build", "-o", serverBin, mainFile).CombinedOutput()
 	if len(out) > 0 {
@@ -46,12 +49,26 @@ func buildServer(mainFile string) error {
 	return nil
 }
 
+var server *exec.Cmd
+
 func startServer() error {
+	if server != nil && !changed {
+		return nil
+	}
+
+	if server != nil && changed {
+		fmt.Println("Changed, stopping server")
+		server.Process.Kill()
+		server = nil
+		changed = false
+	}
+
+	must(buildServer())
 	fmt.Println("Starting Server")
-	cmd := exec.Command(serverBin)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Start()
+	server = exec.Command(serverBin)
+	server.Stdout = os.Stdout
+	server.Stderr = os.Stderr
+	return server.Start()
 }
 
 var proxy *httputil.ReverseProxy
@@ -67,5 +84,31 @@ func startProxyServer() error {
 }
 
 func ServeRequest(w http.ResponseWriter, r *http.Request) {
+	must(startServer())
+
 	proxy.ServeHTTP(w, r)
+}
+
+var changed = false
+
+func watchServerDir() error {
+	dir := path.Dir(mainFile)
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for {
+			file := <-watcher.Event
+			log.Println("changed:", file.Name)
+			changed = true
+		}
+	}()
+
+	err = watcher.Watch(dir)
+	if err != nil {
+		return err
+	}
+	return nil
 }
