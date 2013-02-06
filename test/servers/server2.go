@@ -7,7 +7,7 @@ import (
 )
 
 func HelloServer(w http.ResponseWriter, req *http.Request) {
-	io.WriteString(w, "hello, world!")
+	io.WriteString(w, "server 2")
 }
 
 func main() {
