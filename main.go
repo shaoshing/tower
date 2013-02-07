@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"time"
 )
 
@@ -47,7 +48,7 @@ func must(err error) {
 }
 
 func buildServer() error {
-	fmt.Println("Building Server")
+	fmt.Println("== Building Server")
 	out, _ := exec.Command("go", "build", "-o", serverBin, mainFile).CombinedOutput()
 	if len(out) > 0 {
 		return errors.New("Could not build server: " + string(out))
@@ -63,7 +64,7 @@ func startServer() (err error) {
 	}
 
 	if server != nil && changed {
-		fmt.Println("Changed, stopping server")
+		fmt.Println("== Changed, stopping server")
 		stopServer()
 		changed = false
 	}
@@ -73,7 +74,7 @@ func startServer() (err error) {
 		return err
 	}
 
-	fmt.Println("Starting Server")
+	fmt.Println("== Starting Server")
 	server = exec.Command(serverBin)
 	server.Stdout = os.Stdout
 	server.Stderr = os.Stderr
@@ -113,7 +114,7 @@ func waitForServer(address string) error {
 var proxy *httputil.ReverseProxy
 
 func startProxyServer() error {
-	fmt.Println("Starting Proxy Server")
+	fmt.Println("== Listening to http://localhost:8000")
 	url, _ := url.ParseRequestURI("http://localhost:" + *serverPort)
 	proxy = httputil.NewSingleHostReverseProxy(url)
 
@@ -141,16 +142,25 @@ func renderError(w http.ResponseWriter, err error) {
 	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", projectName, err.Error())
 }
 
+var staticExp = regexp.MustCompile(`\.(png|jpg|jpeg|gif|svg|ico|swf|js|css|html)`)
+
+func isStaticRequest(uri string) bool {
+	return staticExp.Match([]byte(uri))
+}
+
 func logStartRequest(r *http.Request) {
 	// TODO:
 	// display params
-	// filter static requests
-	fmt.Printf("\n\n\nStarted %s \"%s\" at %s\n", r.Method, r.RequestURI, time.Now().Format("2006-01-02 15:04:05 +700"))
+	if !isStaticRequest(r.RequestURI) {
+		fmt.Printf("\n\n\nStarted %s \"%s\" at %s\n", r.Method, r.RequestURI, time.Now().Format("2006-01-02 15:04:05 +700"))
+	}
 }
 
 func logEndRequest(w http.ResponseWriter, r *http.Request, startTime time.Time) {
 	// TODO: display status code
-	fmt.Printf("Completed in %dms", time.Since(startTime)/time.Millisecond)
+	if !isStaticRequest(r.RequestURI) {
+		fmt.Printf("Completed in %dms\n", time.Since(startTime)/time.Millisecond)
+	}
 }
 
 var changed = false
