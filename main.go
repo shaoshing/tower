@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"github.com/howeyc/fsnotify"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"time"
 )
 
 const (
@@ -68,7 +70,29 @@ func startServer() error {
 	server = exec.Command(serverBin)
 	server.Stdout = os.Stdout
 	server.Stderr = os.Stderr
-	return server.Start()
+
+	err := server.Start()
+	if err != nil {
+		return err
+	}
+
+	err = waitForServer()
+	return err
+}
+
+func waitForServer() error {
+	for {
+		select {
+		case <-time.After(1 * time.Second):
+			_, err := net.Dial("tcp", "127.0.0.1:"+*serverPort)
+			if err == nil {
+				return nil
+			}
+		case <-time.After(1 * time.Minute):
+			return errors.New("Fail to start server")
+		}
+	}
+	return nil
 }
 
 var proxy *httputil.ReverseProxy
