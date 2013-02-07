@@ -12,9 +12,7 @@ func TestCmd(t *testing.T) {
 	assert.Test = t
 
 	mainFile = "test/server1.go"
-	go func() {
-		startTower()
-	}()
+	go startTower()
 	err := waitForServer("127.0.0.1:8000")
 	if err != nil {
 		panic(err)
