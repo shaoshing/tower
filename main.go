@@ -123,9 +123,13 @@ func startProxyServer() error {
 }
 
 func serveRequest(w http.ResponseWriter, r *http.Request) {
+	logStartRequest(r)
+	defer logEndRequest(w, r, time.Now())
+
 	err := startServer()
 	if err != nil {
 		renderError(w, err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -135,6 +139,18 @@ func serveRequest(w http.ResponseWriter, r *http.Request) {
 func renderError(w http.ResponseWriter, err error) {
 	projectName := path.Base(path.Dir(mainFile))
 	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", projectName, err.Error())
+}
+
+func logStartRequest(r *http.Request) {
+	// TODO:
+	// display params
+	// filter static requests
+	fmt.Printf("\n\n\nStarted %s \"%s\" at %s\n", r.Method, r.RequestURI, time.Now().Format("2006-01-02 15:04:05 +700"))
+}
+
+func logEndRequest(w http.ResponseWriter, r *http.Request, startTime time.Time) {
+	// TODO: display status code
+	fmt.Printf("Completed in %dms", time.Since(startTime)/time.Millisecond)
 }
 
 var changed = false
