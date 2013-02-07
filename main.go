@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"time"
@@ -189,23 +190,39 @@ func logEndRequest(w http.ResponseWriter, r *http.Request, startTime time.Time) 
 var changed = false
 
 func watchServerDir() error {
-	dir := path.Dir(appMainFile)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
 
+	expectedFileReg := regexp.MustCompile(`\.(go|html)`)
 	go func() {
 		for {
 			file := <-watcher.Event
-			fmt.Println("== Change detected:", file.Name)
-			changed = true
+			if expectedFileReg.Match([]byte(file.Name)) {
+				fmt.Println("== Change detected:", file.Name)
+				changed = true
+			}
 		}
 	}()
 
-	err = watcher.Watch(dir)
-	if err != nil {
-		return err
+	ignoredPathReg := regexp.MustCompile(`(public)|(\/\.\w+)|(^\.)|(\.\w+$)`)
+	dirsToWatch := make(map[string]bool)
+	root := path.Dir(appMainFile)
+	filepath.Walk(root, func(filePath string, info os.FileInfo, e error) (err error) {
+		if !info.IsDir() || ignoredPathReg.Match([]byte(filePath)) || dirsToWatch[filePath] {
+			return
+		}
+
+		dirsToWatch[filePath] = true
+		return
+	})
+
+	for dir, _ := range dirsToWatch {
+		err = watcher.Watch(dir)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
