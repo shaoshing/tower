@@ -1,4 +1,4 @@
 
-go build -o tmp/tower main.go
-./tmp/tower test/server1.go
 
+go build -o tmp/tower main.go
+tmp/tower --config test/configs/tower.yml

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/howeyc/fsnotify"
+	"github.com/kylelemons/go-gypsy/yaml"
 	"log"
 	"net"
 	"net/http"
@@ -22,26 +23,29 @@ const (
 	serverBin = "tmp/tower-server"
 )
 
-var serverPort = flag.String("port", "5000", "web service address")
-var mainFile string
+var appMainFile string
+var appPort string
+var appConfigFile = flag.String("config", "configs/tower.yml", "run \"tower init\" to get an example config.")
 
 func main() {
 	flag.Parse()
-	args := flag.Args()
-	if len(args) != 1 {
-		fmt.Println("Error: you must specify the main file.")
-	} else {
-		mainFile = args[0]
-		startTower()
+	startTower(*appConfigFile)
+}
+
+func startTower(configFile string) {
+	config, err := yaml.ReadFile(configFile)
+	if err != nil {
+		fmt.Println("You must have a tower.yml config file, run \"tower init\" to get an example config.")
+		return
 	}
+	appMainFile, _ = config.Get("main")
+	appPort, _ = config.Get("port")
+
+	mustSuccess(watchServerDir())
+	mustSuccess(startProxyServer())
 }
 
-func startTower() {
-	must(watchServerDir())
-	must(startProxyServer())
-}
-
-func must(err error) {
+func mustSuccess(err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -49,9 +53,9 @@ func must(err error) {
 
 func buildServer() error {
 	fmt.Println("== Building Server")
-	out, _ := exec.Command("go", "build", "-o", serverBin, mainFile).CombinedOutput()
+	out, _ := exec.Command("go", "build", "-o", serverBin, appMainFile).CombinedOutput()
 	if len(out) > 0 {
-		return errors.New("Could not build server: " + string(out))
+		return errors.New("Could not build app: " + string(out))
 	}
 	return nil
 }
@@ -64,7 +68,7 @@ func startServer() (err error) {
 	}
 
 	if server != nil && changed {
-		fmt.Println("== Changed, stopping server")
+		fmt.Println("== Changed, stopping app")
 		stopServer()
 		changed = false
 	}
@@ -74,7 +78,7 @@ func startServer() (err error) {
 		return err
 	}
 
-	fmt.Println("== Starting Server")
+	fmt.Println("== Starting app")
 	server = exec.Command(serverBin)
 	server.Stdout = os.Stdout
 	server.Stderr = os.Stderr
@@ -84,7 +88,7 @@ func startServer() (err error) {
 		return err
 	}
 
-	err = waitForServer("127.0.0.1:" + *serverPort)
+	err = waitForServer("127.0.0.1:" + appPort)
 	return err
 }
 
@@ -105,7 +109,7 @@ func waitForServer(address string) error {
 				return nil
 			}
 		case <-time.After(1 * time.Minute):
-			return errors.New("Fail to start server")
+			return errors.New("Fail to start app")
 		}
 	}
 	return nil
@@ -115,7 +119,7 @@ var proxy *httputil.ReverseProxy
 
 func startProxyServer() error {
 	fmt.Println("== Listening to http://localhost:8000")
-	url, _ := url.ParseRequestURI("http://localhost:" + *serverPort)
+	url, _ := url.ParseRequestURI("http://localhost:" + appPort)
 	proxy = httputil.NewSingleHostReverseProxy(url)
 
 	http.HandleFunc("/", serveRequest)
@@ -138,7 +142,7 @@ func serveRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderError(w http.ResponseWriter, err error) {
-	projectName := path.Base(path.Dir(mainFile))
+	projectName := path.Base(path.Dir(appMainFile))
 	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", projectName, err.Error())
 }
 
@@ -166,7 +170,7 @@ func logEndRequest(w http.ResponseWriter, r *http.Request, startTime time.Time) 
 var changed = false
 
 func watchServerDir() error {
-	dir := path.Dir(mainFile)
+	dir := path.Dir(appMainFile)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -175,7 +179,7 @@ func watchServerDir() error {
 	go func() {
 		for {
 			file := <-watcher.Event
-			log.Println("changed:", file.Name)
+			log.Println("change detected:", file.Name)
 			changed = true
 		}
 	}()

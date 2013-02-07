@@ -11,8 +11,7 @@ import (
 func TestCmd(t *testing.T) {
 	assert.Test = t
 
-	mainFile = "test/server1.go"
-	go startTower()
+	go startTower("test/configs/tower.yml")
 	err := waitForServer("127.0.0.1:8000")
 	if err != nil {
 		panic(err)
