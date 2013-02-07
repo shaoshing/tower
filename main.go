@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"runtime"
 	"time"
 )
 
@@ -26,10 +27,26 @@ const (
 var appMainFile string
 var appPort string
 var appConfigFile = flag.String("config", "configs/tower.yml", "run \"tower init\" to get an example config.")
+var appName string
 
 func main() {
 	flag.Parse()
+
+	args := flag.Args()
+	if len(args) == 1 && args[0] == "init" {
+		generateExampleConfig()
+		return
+	}
+
 	startTower(*appConfigFile)
+}
+
+func generateExampleConfig() {
+	_, file, _, _ := runtime.Caller(0)
+	exampleConfig := path.Dir(file) + "/tower.yml"
+	exec.Command("mkdir", "-f", "configs").Run()
+	exec.Command("cp", exampleConfig, "configs/tower.yml").Run()
+	fmt.Println("Generated example config in configs/tower.yml")
 }
 
 func startTower(configFile string) {
@@ -40,7 +57,10 @@ func startTower(configFile string) {
 	}
 	appMainFile, _ = config.Get("main")
 	appPort, _ = config.Get("port")
+	wd, _ := os.Getwd()
+	appName = path.Base(wd)
 
+	mustSuccess(startServer())
 	mustSuccess(watchServerDir())
 	mustSuccess(startProxyServer())
 }
@@ -52,7 +72,7 @@ func mustSuccess(err error) {
 }
 
 func buildServer() error {
-	fmt.Println("== Building Server")
+	fmt.Println("== Building " + appName)
 	out, _ := exec.Command("go", "build", "-o", serverBin, appMainFile).CombinedOutput()
 	if len(out) > 0 {
 		return errors.New("Could not build app: " + string(out))
@@ -68,7 +88,7 @@ func startServer() (err error) {
 	}
 
 	if server != nil && changed {
-		fmt.Println("== Changed, stopping app")
+		fmt.Println("== Changed, stopping " + appName)
 		stopServer()
 		changed = false
 	}
@@ -78,7 +98,7 @@ func startServer() (err error) {
 		return err
 	}
 
-	fmt.Println("== Starting app")
+	fmt.Println("== Starting " + appName)
 	server = exec.Command(serverBin)
 	server.Stdout = os.Stdout
 	server.Stderr = os.Stderr
@@ -109,7 +129,7 @@ func waitForServer(address string) error {
 				return nil
 			}
 		case <-time.After(1 * time.Minute):
-			return errors.New("Fail to start app")
+			return errors.New("Fail to start " + appName)
 		}
 	}
 	return nil
