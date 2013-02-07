@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/howeyc/fsnotify"
 	"github.com/kylelemons/go-gypsy/yaml"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -88,7 +87,6 @@ func startServer() (err error) {
 	}
 
 	if server != nil && changed {
-		fmt.Println("== Changed, stopping " + appName)
 		stopServer()
 		changed = false
 	}
@@ -114,6 +112,7 @@ func startServer() (err error) {
 
 func stopServer() {
 	if server != nil {
+		fmt.Println("== Stopping " + appName)
 		server.Process.Kill()
 		server = nil
 	}
@@ -199,7 +198,7 @@ func watchServerDir() error {
 	go func() {
 		for {
 			file := <-watcher.Event
-			log.Println("change detected:", file.Name)
+			fmt.Println("== Change detected:", file.Name)
 			changed = true
 		}
 	}()
