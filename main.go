@@ -57,7 +57,7 @@ func buildServer() error {
 
 var server *exec.Cmd
 
-func startServer() error {
+func startServer() (err error) {
 	if server != nil && !changed {
 		return nil
 	}
@@ -68,13 +68,17 @@ func startServer() error {
 		changed = false
 	}
 
-	must(buildServer())
+	err = buildServer()
+	if err != nil {
+		return err
+	}
+
 	fmt.Println("Starting Server")
 	server = exec.Command(serverBin)
 	server.Stdout = os.Stdout
 	server.Stderr = os.Stderr
 
-	err := server.Start()
+	err = server.Start()
 	if err != nil {
 		return err
 	}
@@ -84,8 +88,11 @@ func startServer() error {
 }
 
 func stopServer() {
-	server.Process.Kill()
-	server = nil
+	if server != nil {
+		server.Process.Kill()
+		server = nil
+	}
+
 }
 
 func waitForServer(address string) error {
@@ -110,15 +117,24 @@ func startProxyServer() error {
 	url, _ := url.ParseRequestURI("http://localhost:" + *serverPort)
 	proxy = httputil.NewSingleHostReverseProxy(url)
 
-	http.HandleFunc("/", ServeRequest)
+	http.HandleFunc("/", serveRequest)
 	err := http.ListenAndServe(port, nil)
 	return err
 }
 
-func ServeRequest(w http.ResponseWriter, r *http.Request) {
-	must(startServer())
+func serveRequest(w http.ResponseWriter, r *http.Request) {
+	err := startServer()
+	if err != nil {
+		renderError(w, err)
+		return
+	}
 
 	proxy.ServeHTTP(w, r)
+}
+
+func renderError(w http.ResponseWriter, err error) {
+	projectName := path.Base(path.Dir(mainFile))
+	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", projectName, err.Error())
 }
 
 var changed = false

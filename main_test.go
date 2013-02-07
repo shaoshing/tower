@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bmizerany/assert"
+	"github.com/shaoshing/gotest"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
@@ -9,6 +9,8 @@ import (
 )
 
 func TestCmd(t *testing.T) {
+	assert.Test = t
+
 	mainFile = "test/server1.go"
 	go func() {
 		startTower()
@@ -19,12 +21,16 @@ func TestCmd(t *testing.T) {
 	}
 	defer stopServer()
 
-	assert.Equal(t, "server 1", get("http://127.0.0.1:8000/"))
-	assert.Equal(t, "server 1", get("http://127.0.0.1:5000/"))
+	assert.Equal("server 1", get("http://127.0.0.1:8000/"))
+	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
 
-	exec.Command("cp", "test/servers/server2.go", "test/server1.go").Run()
 	defer exec.Command("git", "checkout", "test").Run()
-	assert.Equal(t, "server 2", get("http://127.0.0.1:8000/"))
+
+	exec.Command("cp", "test/files/server2.go", "test/server1.go").Run()
+	assert.Equal("server 2", get("http://127.0.0.1:8000/"))
+
+	exec.Command("cp", "test/files/error.go", "test/server1.go").Run()
+	assert.Match("Fail to build test", get("http://127.0.0.1:8000/"))
 }
 
 func get(url string) string {
