@@ -31,9 +31,13 @@ func main() {
 		fmt.Println("Error: you must specify the main file.")
 	} else {
 		mainFile = args[0]
-		must(watchServerDir())
-		must(startProxyServer())
+		startTower()
 	}
+}
+
+func startTower() {
+	must(watchServerDir())
+	must(startProxyServer())
 }
 
 func must(err error) {
@@ -60,8 +64,7 @@ func startServer() error {
 
 	if server != nil && changed {
 		fmt.Println("Changed, stopping server")
-		server.Process.Kill()
-		server = nil
+		stopServer()
 		changed = false
 	}
 
@@ -76,15 +79,20 @@ func startServer() error {
 		return err
 	}
 
-	err = waitForServer()
+	err = waitForServer("127.0.0.1:" + *serverPort)
 	return err
 }
 
-func waitForServer() error {
+func stopServer() {
+	server.Process.Kill()
+	server = nil
+}
+
+func waitForServer(address string) error {
 	for {
 		select {
 		case <-time.After(1 * time.Second):
-			_, err := net.Dial("tcp", "127.0.0.1:"+*serverPort)
+			_, err := net.Dial("tcp", address)
 			if err == nil {
 				return nil
 			}

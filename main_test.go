@@ -1,37 +1,37 @@
 package main
 
 import (
-	"errors"
 	"github.com/bmizerany/assert"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"os/exec"
 	"testing"
-	"time"
 )
 
 func TestCmd(t *testing.T) {
-	out, _ := exec.Command("go", "build", "-o", "tmp/tower", "main.go").CombinedOutput()
-	if len(out) > 0 {
-		panic(errors.New("Could not build server: " + string(out)))
-	}
-
-	cmd := exec.Command("tmp/tower", "test/server.go")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Start()
+	mainFile = "test/server1.go"
+	go func() {
+		startTower()
+	}()
+	err := waitForServer("127.0.0.1:8000")
 	if err != nil {
 		panic(err)
 	}
-	defer cmd.Process.Kill()
+	defer stopServer()
 
-	time.Sleep(5 * time.Second)
+	assert.Equal(t, "server 1", get("http://127.0.0.1:8000/"))
+	assert.Equal(t, "server 1", get("http://127.0.0.1:5000/"))
 
-	resp, err := http.Get("http://127.0.0.1:8000/")
+	exec.Command("cp", "test/servers/server2.go", "test/server1.go").Run()
+	defer exec.Command("git", "checkout", "test").Run()
+	assert.Equal(t, "server 2", get("http://127.0.0.1:8000/"))
+}
+
+func get(url string) string {
+	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)
 	}
-	b_body, err := ioutil.ReadAll(resp.Body)
-	assert.Equal(t, "hello, world!", string(b_body))
+	b_body, _ := ioutil.ReadAll(resp.Body)
+	return string(b_body)
 }
