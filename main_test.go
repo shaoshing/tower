@@ -16,7 +16,7 @@ func TestCmd(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer stopServer()
+	defer app.Stop()
 
 	assert.Equal("server 1", get("http://127.0.0.1:8000/"))
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
@@ -27,7 +27,7 @@ func TestCmd(t *testing.T) {
 	assert.Equal("server 2", get("http://127.0.0.1:8000/"))
 
 	exec.Command("cp", "test/files/error.go", "test/server1.go").Run()
-	assert.Match("Fail to build test", get("http://127.0.0.1:8000/"))
+	assert.Match("Fail to build tower", get("http://127.0.0.1:8000/"))
 }
 
 func get(url string) string {

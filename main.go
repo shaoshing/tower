@@ -20,14 +20,11 @@ import (
 )
 
 const (
-	port      = ":8000"
-	serverBin = "tmp/tower-server"
+	port = ":8000"
 )
 
-var appMainFile string
-var appPort string
 var appConfigFile = flag.String("config", "configs/tower.yml", "run \"tower init\" to get an example config.")
-var appName string
+var app App
 
 func main() {
 	flag.Parse()
@@ -55,12 +52,12 @@ func startTower(configFile string) {
 		fmt.Println("You must have a tower.yml config file, run \"tower init\" to get an example config.")
 		return
 	}
-	appMainFile, _ = config.Get("main")
-	appPort, _ = config.Get("port")
-	wd, _ := os.Getwd()
-	appName = path.Base(wd)
 
-	mustSuccess(startServer())
+	appMainFile, _ := config.Get("main")
+	appPort, _ := config.Get("port")
+	app = NewApp(appMainFile, appPort)
+
+	mustSuccess(app.Start())
 	mustSuccess(watchServerDir())
 	mustSuccess(startProxyServer())
 }
@@ -69,55 +66,6 @@ func mustSuccess(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func buildServer() error {
-	fmt.Println("== Building " + appName)
-	out, _ := exec.Command("go", "build", "-o", serverBin, appMainFile).CombinedOutput()
-	if len(out) > 0 {
-		return errors.New("Could not build app: " + string(out))
-	}
-	return nil
-}
-
-var server *exec.Cmd
-
-func startServer() (err error) {
-	if server != nil && !changed {
-		return nil
-	}
-
-	if server != nil && changed {
-		stopServer()
-		changed = false
-	}
-
-	err = buildServer()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("== Starting " + appName)
-	server = exec.Command(serverBin)
-	server.Stdout = os.Stdout
-	server.Stderr = os.Stderr
-
-	err = server.Start()
-	if err != nil {
-		return err
-	}
-
-	err = waitForServer("127.0.0.1:" + appPort)
-	return err
-}
-
-func stopServer() {
-	if server != nil {
-		fmt.Println("== Stopping " + appName)
-		server.Process.Kill()
-		server = nil
-	}
-
 }
 
 func waitForServer(address string) error {
@@ -129,7 +77,7 @@ func waitForServer(address string) error {
 				return nil
 			}
 		case <-time.After(1 * time.Minute):
-			return errors.New("Fail to start " + appName)
+			return errors.New("Fail to start " + app.Name)
 		}
 	}
 	return nil
@@ -139,7 +87,7 @@ var proxy *httputil.ReverseProxy
 
 func startProxyServer() error {
 	fmt.Println("== Listening to http://localhost:8000")
-	url, _ := url.ParseRequestURI("http://localhost:" + appPort)
+	url, _ := url.ParseRequestURI("http://localhost:" + app.Port)
 	proxy = httputil.NewSingleHostReverseProxy(url)
 
 	http.HandleFunc("/", serveRequest)
@@ -151,22 +99,24 @@ func serveRequest(w http.ResponseWriter, r *http.Request) {
 	logStartRequest(r)
 	defer logEndRequest(w, r, time.Now())
 
-	err := startServer()
-	if err != nil {
-		renderError(w, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if changed {
+		err := app.Restart()
+		if err != nil {
+			renderError(w, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		changed = false
 	}
 
 	proxy.ServeHTTP(w, r)
 }
 
 func renderError(w http.ResponseWriter, err error) {
-	projectName := path.Base(path.Dir(appMainFile))
-	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", projectName, err.Error())
+	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", app.Name, err.Error())
 }
 
-var staticExp = regexp.MustCompile(`\.(png|jpg|jpeg|gif|svg|ico|swf|js|css|html)`)
+var staticExp = regexp.MustCompile(`\.(png|jpg|jpeg|gif|svg|ico|swf|js|css|html|woff)`)
 
 func isStaticRequest(uri string) bool {
 	return staticExp.Match([]byte(uri))
@@ -208,8 +158,7 @@ func watchServerDir() error {
 
 	ignoredPathReg := regexp.MustCompile(`(public)|(\/\.\w+)|(^\.)|(\.\w+$)`)
 	dirsToWatch := make(map[string]bool)
-	root := path.Dir(appMainFile)
-	filepath.Walk(root, func(filePath string, info os.FileInfo, e error) (err error) {
+	filepath.Walk(app.Root, func(filePath string, info os.FileInfo, e error) (err error) {
 		if !info.IsDir() || ignoredPathReg.Match([]byte(filePath)) || dirsToWatch[filePath] {
 			return
 		}
