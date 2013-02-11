@@ -6,18 +6,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 )
 
 const AppBin = "tmp/tower-server"
 
 type App struct {
-	Cmd             *exec.Cmd
-	MainFile        string
-	Port            string
-	Name            string
-	Root            string
-	ListeningReturn bool
+	Cmd      *exec.Cmd
+	MainFile string
+	Port     string
+	Name     string
+	Root     string
+	KeyPress bool
 }
 
 func NewApp(mainFile, port string) (app App) {
@@ -79,11 +80,12 @@ func (this *App) Build() (err error) {
 
 func (this *App) RestartOnReturn() {
 	fmt.Println("   (Hit [return] to rebuild your app)")
-	if this.ListeningReturn {
+	if this.KeyPress {
 		return
 	}
+	this.KeyPress = true
 
-	this.ListeningReturn = true
+	// Listen to keypress of "return" and restart the app automatically
 	go func() {
 		in := bufio.NewReader(os.Stdin)
 		for {
@@ -92,5 +94,15 @@ func (this *App) RestartOnReturn() {
 				this.Restart()
 			}
 		}
+	}()
+
+	// Listen to "^C" signal and stop the app properly
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt)
+		<-sig // wait for the "^C" signal
+		fmt.Println("")
+		this.Stop()
+		os.Exit(0)
 	}()
 }
