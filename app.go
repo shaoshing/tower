@@ -8,9 +8,7 @@ import (
 	"path"
 )
 
-const (
-	appBin = "tmp/tower-server"
-)
+const AppBin = "tmp/tower-server"
 
 type App struct {
 	Cmd      *exec.Cmd
@@ -36,7 +34,7 @@ func (this *App) Start() (err error) {
 	}
 
 	fmt.Println("== Starting " + this.Name)
-	this.Cmd = exec.Command(appBin)
+	this.Cmd = exec.Command(AppBin)
 	this.Cmd.Stdout = os.Stdout
 	this.Cmd.Stderr = os.Stderr
 
@@ -46,6 +44,9 @@ func (this *App) Start() (err error) {
 	}
 
 	err = waitForServer("127.0.0.1:" + this.Port)
+	if err != nil {
+		return errors.New("Fail to start " + this.Name)
+	}
 	return
 }
 
@@ -64,7 +65,7 @@ func (this *App) Stop() {
 
 func (this *App) Build() (err error) {
 	fmt.Println("== Building " + this.Name)
-	out, _ := exec.Command("go", "build", "-o", appBin, this.MainFile).CombinedOutput()
+	out, _ := exec.Command("go", "build", "-o", AppBin, this.MainFile).CombinedOutput()
 	if len(out) > 0 {
 		return errors.New("Could not build app: " + string(out))
 	}

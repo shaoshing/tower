@@ -16,7 +16,7 @@ func TestCmd(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer app.Stop()
+	defer stopTower()
 
 	assert.Equal("server 1", get("http://127.0.0.1:8000/"))
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
