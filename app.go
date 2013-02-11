@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -11,11 +12,12 @@ import (
 const AppBin = "tmp/tower-server"
 
 type App struct {
-	Cmd      *exec.Cmd
-	MainFile string
-	Port     string
-	Name     string
-	Root     string
+	Cmd             *exec.Cmd
+	MainFile        string
+	Port            string
+	Name            string
+	Root            string
+	ListeningReturn bool
 }
 
 func NewApp(mainFile, port string) (app App) {
@@ -47,6 +49,9 @@ func (this *App) Start() (err error) {
 	if err != nil {
 		return errors.New("Fail to start " + this.Name)
 	}
+
+	this.RestartOnReturn()
+
 	return
 }
 
@@ -70,4 +75,22 @@ func (this *App) Build() (err error) {
 		return errors.New("Could not build app: " + string(out))
 	}
 	return nil
+}
+
+func (this *App) RestartOnReturn() {
+	fmt.Println("   (Hit [return] to rebuild your app)")
+	if this.ListeningReturn {
+		return
+	}
+
+	this.ListeningReturn = true
+	go func() {
+		in := bufio.NewReader(os.Stdin)
+		for {
+			input, _ := in.ReadString('\n')
+			if input == "\n" {
+				this.Restart()
+			}
+		}
+	}()
 }
