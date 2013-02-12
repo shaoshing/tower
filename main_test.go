@@ -22,10 +22,10 @@ func TestCmd(t *testing.T) {
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
 
 	// test error page
-	assert.Match("Panic !!", get("http://127.0.0.1:8000/panic"))                        // should be able to detect panic
-	assert.Match(`panic(errors.New("Panic !!"))`, get("http://127.0.0.1:8000/panic"))   // should show code snippet
-	assert.Match("index out of range", get("http://127.0.0.1:8000/error"))              // should be able to detect runtime error
-	assert.Match(`paths[0] = "index out of range"`, get("http://127.0.0.1:8000/error")) // should show code snippet
+	assert.Match("Panic !!", get("http://127.0.0.1:8000/panic")) // should be able to detect panic
+	// assert.Match(`panic(errors.New("Panic !!"))`, get("http://127.0.0.1:8000/panic"))   // should show code snippet
+	assert.Match("index out of range", get("http://127.0.0.1:8000/error")) // should be able to detect runtime error
+	// assert.Match(`paths[0] = "index out of range"`, get("http://127.0.0.1:8000/error")) // should show code snippet
 
 	defer exec.Command("git", "checkout", "test").Run()
 

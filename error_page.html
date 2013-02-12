@@ -12,7 +12,7 @@
         margin-bottom: 20px;
       }
 
-      .trace, .message{
+      .trace, .message, .snippet{
         background-color: #eee;
         padding: 15px;
       }
@@ -20,20 +20,42 @@
         list-style: none;
         padding: 0;
       }
+
+      .snippet{
+        width: 700px;
+      }
+      .line, .code{
+        float: left;
+      }
+      .line{
+        text-align: right;
+        width: 50px;
+        padding-right:10px;
+      }
+      .code{
+        width: 630px;
+      }
+      .current{
+        background-color: red;
+      }
     </style>
   </head>
   <body>
     <h1>{{.Title}}</h1>
 
     <div class="message">
-      {{.MessageHtml}}
+      {{.Message}}
     </div>
 
+    {{if .ShowTrace}}
     <h2>Trace:</h2>
     <div class="trace">
       <ul>
-        <li></li>
+        {{range .Trace}}
+        <li>{{.}}</li>
+        {{end}}
       </ul>
     </div>
+    {{end}}
   </body>
 </html>

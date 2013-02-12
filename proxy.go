@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/shaoshing/tower/page"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -42,17 +41,18 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	if !this.App.IsRunning() || this.Watcher.Changed {
 		err := this.App.Restart()
 		if err != nil {
-			this.renderError(w, err)
+			RenderBuildError(w, this.App, err.Error())
 			return
 		}
 		this.Watcher.Reset()
 	}
 
 	this.ReserveProxy.ServeHTTP(w, r)
-}
 
-func (this *Proxy) renderError(w http.ResponseWriter, e error) {
-	page.RenderError(w, page.ErrorInfo{Title: "Fail to build " + this.App.Name, Message: e.Error()})
+	if len(app.LastError) != 0 {
+		RenderAppError(w, this.App, app.LastError)
+		app.LastError = ""
+	}
 }
 
 var staticExp = regexp.MustCompile(`\.(png|jpg|jpeg|gif|svg|ico|swf|js|css|html|woff)`)
