@@ -1,0 +1,39 @@
+<html>
+  <head>
+    <style>
+      *{
+        font-family: Helvetica Neue, Arial, Verdana, sans-serif;
+      }
+      body{
+        margin: 0;
+        margin: 20px;
+      }
+      h1{
+        margin-bottom: 20px;
+      }
+
+      .trace, .message{
+        background-color: #eee;
+        padding: 15px;
+      }
+      .trace ul{
+        list-style: none;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>{{.Title}}</h1>
+
+    <div class="message">
+      {{.Message}}
+    </div>
+
+    <h2>Trace:</h2>
+    <div class="trace">
+      <ul>
+        <li></li>
+      </ul>
+    </div>
+  </body>
+</html>

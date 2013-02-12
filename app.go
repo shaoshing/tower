@@ -80,6 +80,10 @@ func (this *App) Build() (err error) {
 	return nil
 }
 
+func (this *App) IsRunning() bool {
+	return this.Cmd != nil
+}
+
 func (this *App) RestartOnReturn() {
 	fmt.Println("   (Hit [return] to rebuild your app)")
 	if this.KeyPress {

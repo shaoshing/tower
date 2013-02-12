@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/shaoshing/tower/page"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -24,8 +25,6 @@ func NewProxy(app *App, watcher *Watcher) (proxy Proxy) {
 }
 
 func (this *Proxy) Listen() (err error) {
-	this.App.Start()
-
 	fmt.Println("== Listening to http://localhost" + ProxyPort)
 	url, _ := url.ParseRequestURI("http://localhost:" + this.App.Port)
 	this.ReserveProxy = httputil.NewSingleHostReverseProxy(url)
@@ -40,11 +39,10 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	this.logStartRequest(r)
 	defer this.logEndRequest(w, r, time.Now())
 
-	if this.Watcher.Changed {
+	if !this.App.IsRunning() || this.Watcher.Changed {
 		err := this.App.Restart()
 		if err != nil {
 			this.renderError(w, err)
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		this.Watcher.Reset()
@@ -53,8 +51,8 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	this.ReserveProxy.ServeHTTP(w, r)
 }
 
-func (this *Proxy) renderError(w http.ResponseWriter, err error) {
-	fmt.Fprintf(w, "Fail to build %s\n Errors: \n%s", this.App.Name, err.Error())
+func (this *Proxy) renderError(w http.ResponseWriter, e error) {
+	page.RenderError(w, page.Error{Title: "Fail to build " + this.App.Name, Message: e.Error()})
 }
 
 var staticExp = regexp.MustCompile(`\.(png|jpg|jpeg|gif|svg|ico|swf|js|css|html|woff)`)
