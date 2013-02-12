@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"strings"
 )
 
 const AppBin = "tmp/tower-server"
@@ -73,7 +74,8 @@ func (this *App) Build() (err error) {
 	fmt.Println("== Building " + this.Name)
 	out, _ := exec.Command("go", "build", "-o", AppBin, this.MainFile).CombinedOutput()
 	if len(out) > 0 {
-		return errors.New("Could not build app: " + string(out))
+		msg := strings.Replace(string(out), "# command-line-arguments\n", "", 1)
+		return errors.New(msg)
 	}
 	return nil
 }
