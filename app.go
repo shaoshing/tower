@@ -14,12 +14,22 @@ import (
 const AppBin = "tmp/tower-server"
 
 type App struct {
-	Cmd      *exec.Cmd
-	MainFile string
-	Port     string
-	Name     string
-	Root     string
-	KeyPress bool
+	Cmd       *exec.Cmd
+	MainFile  string
+	Port      string
+	Name      string
+	Root      string
+	KeyPress  bool
+	LastError string
+}
+
+type StderrCapturer struct {
+	app *App
+}
+
+func (this StderrCapturer) Write(p []byte) (n int, err error) {
+	app.LastError = string(p)
+	return os.Stdout.Write(p)
 }
 
 func NewApp(mainFile, port string) (app App) {
@@ -40,7 +50,7 @@ func (this *App) Start() (err error) {
 	fmt.Println("== Starting " + this.Name)
 	this.Cmd = exec.Command(AppBin)
 	this.Cmd.Stdout = os.Stdout
-	this.Cmd.Stderr = os.Stderr
+	this.Cmd.Stderr = StderrCapturer{this}
 
 	err = this.Cmd.Start()
 	if err != nil {
