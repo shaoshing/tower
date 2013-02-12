@@ -52,7 +52,7 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (this *Proxy) renderError(w http.ResponseWriter, e error) {
-	page.RenderError(w, page.Error{Title: "Fail to build " + this.App.Name, Message: e.Error()})
+	page.RenderError(w, page.ErrorInfo{Title: "Fail to build " + this.App.Name, Message: e.Error()})
 }
 
 var staticExp = regexp.MustCompile(`\.(png|jpg|jpeg|gif|svg|ico|swf|js|css|html|woff)`)
