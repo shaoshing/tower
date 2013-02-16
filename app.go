@@ -11,7 +11,10 @@ import (
 	"strings"
 )
 
-const AppBin = "tmp/tower-server"
+const (
+	AppBin           = "tmp/tower-server"
+	HttpPanicMessage = "http: panic serving"
+)
 
 type App struct {
 	Cmd       *exec.Cmd
@@ -28,8 +31,13 @@ type StderrCapturer struct {
 }
 
 func (this StderrCapturer) Write(p []byte) (n int, err error) {
-	app.LastError = string(p)
-	return os.Stdout.Write(p)
+	if strings.Contains(string(p), HttpPanicMessage) {
+		app.LastError = string(p)
+	}
+	os.Stdout.Write([]byte("----------- Application Error -----------\n"))
+	n, err = os.Stdout.Write(p)
+	os.Stdout.Write([]byte("-----------------------------------------\n"))
+	return
 }
 
 func NewApp(mainFile, port string) (app App) {
@@ -95,7 +103,6 @@ func (this *App) IsRunning() bool {
 }
 
 func (this *App) RestartOnReturn() {
-	fmt.Println("   (Hit [return] to rebuild your app)")
 	if this.KeyPress {
 		return
 	}

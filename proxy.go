@@ -47,11 +47,10 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 		this.Watcher.Reset()
 	}
 
+	app.LastError = ""
 	this.ReserveProxy.ServeHTTP(w, r)
-
 	if len(app.LastError) != 0 {
 		RenderAppError(w, this.App, app.LastError)
-		app.LastError = ""
 	}
 }
 
