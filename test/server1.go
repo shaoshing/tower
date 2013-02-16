@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	// "github.com/shaoshing/tower/page"
 	"io"
 	"log"
 	"net/http"
@@ -10,10 +9,6 @@ import (
 
 func HelloServer(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "server 1")
-}
-
-func Panic(w http.ResponseWriter, req *http.Request) {
-	panic(errors.New("Panic !!"))
 }
 
 func Error(w http.ResponseWriter, req *http.Request) {
@@ -29,4 +24,8 @@ func main() {
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func Panic(w http.ResponseWriter, req *http.Request) {
+	panic(errors.New("Panic !!"))
 }

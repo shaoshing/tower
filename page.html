@@ -6,67 +6,131 @@
       }
       body{
         margin: 0;
-        margin: 20px;
+      }
+      .header{
+        width:100%;
+        height: 70px;
+        background-color: #D8E5F2;
       }
       h1{
-        margin-bottom: 20px;
+        font-size: 30px;
+        line-height: 70px;
+        width: 880px;
+        margin: 0 auto;
+        padding-left: 20px;
+      }
+      .content{
+        width: 880px;
+        margin: 0 auto;
+        padding-left:20px;
       }
 
-      .trace, .message, .snippet{
-        background-color: #eee;
-        padding: 15px;
-      }
-      .trace ul{
-        list-style: none;
-        padding: 0;
+      h2{
+        font-size:20px;
       }
 
-      .snippet{
-        width: 700px;
+      .message{
+        margin: 40px 0 60px 0;
       }
-      .line, .code{
-        float: left;
+
+      .snippet, .trace{
+        margin-left: -15px;
+        padding:14px;
+        border: 1px solid #D8E5F2;
+        border-radius: 5px;
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        margin-bottom: 30px;
       }
-      .line{
+
+      .numbers, .codes{
+        line-height: 22px;
+      }
+      .numbers{
+        float:left;
         text-align: right;
-        width: 50px;
-        padding-right:10px;
+        margin-right: 15px;
+        color: #929292;
       }
-      .code{
-        width: 630px;
+
+      .trace ul{
+        padding: 0;
+        margin: 0;
+        list-style: none;
       }
-      .current{
-        background-color: red;
+      .trace ul li{
+        margin-bottom: 10px;
       }
+
+      .trace .func{
+        color: #929292;
+      }
+
+      .clearfix{
+        clear: both;
+      }
+
     </style>
   </head>
   <body>
-    <h1>{{.Title}}</h1>
-
-    <div class="message">
-      {{.Message}}
+    <div class="header">
+      <h1>{{.Title}} -- {{.Time}}</h1>
     </div>
 
+    <div class="content">
+      <div class="message">
+        {{.Message}}
+      </div>
 
-    {{if .ShowSnippet}}
-    <div class="snippet">
-      {{range .Snippet}}
-      <div class="line">{{.Number}}</div><div class="code {{if .Current}}current{{end}}">{{.Code}}</div>
+
+      {{if .ShowSnippet}}
+      <h2>{{.SnippetPath}}</h2>
+      <div class="snippet">
+        <div class="numbers">
+          {{range .Snippet}}
+            {{if .Current}}
+              <strong>{{.Number}}</strong>
+            {{else}}
+              {{.Number}}
+            {{end}}
+            <br/>
+          {{end}}
+        </div>
+
+        <div class="codes">
+          {{range .Snippet}}
+            {{if .Current}}
+              <strong>{{.Code}}</strong>
+            {{else}}
+              {{.Code}}
+            {{end}}
+            <br/>
+          {{end}}
+        </div>
+        <div class="clearfix"></div>
+      </div>
       {{end}}
-      <div style="clear: both;"></div>
-    </div>
-    {{end}}
 
 
-    {{if .ShowTrace}}
-    <h2>Trace:</h2>
-    <div class="trace">
-      <ul>
-        {{range .Trace}}
-        <li>{{.}}</li>
-        {{end}}
-      </ul>
+      {{if .ShowTrace}}
+      <h2>Trace</h2>
+      <div class="trace">
+        <ul>
+          {{range .Trace}}
+          <li>
+            {{if .AppFile}}
+              <strong>{{.File}}</strong>
+            {{end}}
+            {{if not .AppFile}}
+              {{.File}}
+            {{end}}
+            <br/>
+            <span class="func">{{.Func}}</span>
+          </li>
+          {{end}}
+        </ul>
+      </div>
+      {{end}}
     </div>
-    {{end}}
   </body>
 </html>
