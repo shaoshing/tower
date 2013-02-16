@@ -31,12 +31,16 @@ type StderrCapturer struct {
 }
 
 func (this StderrCapturer) Write(p []byte) (n int, err error) {
-	if strings.Contains(string(p), HttpPanicMessage) {
+	httpError := strings.Contains(string(p), HttpPanicMessage)
+
+	if httpError {
 		app.LastError = string(p)
+		os.Stdout.Write([]byte("----------- Application Error -----------\n"))
+		n, err = os.Stdout.Write(p)
+		os.Stdout.Write([]byte("-----------------------------------------\n"))
+	} else {
+		n, err = os.Stdout.Write(p)
 	}
-	os.Stdout.Write([]byte("----------- Application Error -----------\n"))
-	n, err = os.Stdout.Write(p)
-	os.Stdout.Write([]byte("-----------------------------------------\n"))
 	return
 }
 
