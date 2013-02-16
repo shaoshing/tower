@@ -12,7 +12,7 @@ func TestCmd(t *testing.T) {
 	assert.Test = t
 
 	go startTower("test/configs/tower.yml")
-	err := waitForServer("127.0.0.1:8000")
+	err := dialAddress("127.0.0.1:8000", 60)
 	if err != nil {
 		panic(err)
 	}
@@ -21,14 +21,18 @@ func TestCmd(t *testing.T) {
 	assert.Equal("server 1", get("http://127.0.0.1:8000/"))
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
 
+	// test app exits unexpectedly
+	get("http://127.0.0.1:8000/exit")
+	assert.Equal("server 1", get("http://127.0.0.1:8000/")) // should restart the application
+
 	// test error page
 	highlightCode := `<strong>&nbsp;&nbsp;&nbsp;&nbsp;`
 	assert.Contain("Panic !!", get("http://127.0.0.1:8000/panic"))                       // should be able to detect panic
 	assert.Contain(highlightCode+`panic(errors.New`, get("http://127.0.0.1:8000/panic")) // should show code snippet
-	assert.Contain(`<strong>30`, get("http://127.0.0.1:8000/panic"))                     // should show line number
+	assert.Contain(`<strong>36`, get("http://127.0.0.1:8000/panic"))                     // should show line number
 	assert.Contain("index out of range", get("http://127.0.0.1:8000/error"))             // should be able to detect runtime error
 	assert.Contain(highlightCode+`paths[0]`, get("http://127.0.0.1:8000/error"))         // should show code snippet
-	assert.Contain(`<strong>16`, get("http://127.0.0.1:8000/error"))                     // should show line number
+	assert.Contain(`<strong>17`, get("http://127.0.0.1:8000/error"))                     // should show line number
 
 	defer exec.Command("git", "checkout", "test").Run()
 

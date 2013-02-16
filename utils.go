@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func waitForServer(address string) (err error) {
+func dialAddress(address string, timeOut int) (err error) {
 	for {
 		select {
 		case <-time.After(1 * time.Second):
@@ -17,7 +17,7 @@ func waitForServer(address string) (err error) {
 			}
 		case <-time.After(5 * time.Second):
 			fmt.Println("== Waiting for " + address)
-		case <-time.After(1 * time.Minute):
+		case <-time.After(time.Duration(timeOut) * time.Second):
 			return errors.New("Time out")
 		}
 	}

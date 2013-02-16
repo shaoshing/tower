@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	AppBin           = "tmp/tower-server"
+	AppBin           = "tmp/tower-app"
 	HttpPanicMessage = "http: panic serving"
 )
 
@@ -61,13 +61,11 @@ func (this *App) Start() (err error) {
 	this.Cmd.Stdout = os.Stdout
 	this.Cmd.Stderr = StderrCapturer{this}
 
-	err = this.Cmd.Start()
-	if err != nil {
-		fmt.Println("== Fail to start " + this.Name)
-		return
-	}
+	go func() {
+		this.Cmd.Run()
+	}()
 
-	err = waitForServer("127.0.0.1:" + this.Port)
+	err = dialAddress("127.0.0.1:"+this.Port, 60)
 	if err != nil {
 		return errors.New("Fail to start " + this.Name)
 	}
@@ -83,7 +81,7 @@ func (this *App) Restart() (err error) {
 }
 
 func (this *App) Stop() {
-	if this.Cmd != nil {
+	if this.IsRunning() {
 		fmt.Println("== Stopping " + this.Name)
 		this.Cmd.Process.Kill()
 		this.Cmd = nil
@@ -102,7 +100,7 @@ func (this *App) Build() (err error) {
 }
 
 func (this *App) IsRunning() bool {
-	return this.Cmd != nil
+	return this.Cmd != nil && this.Cmd.ProcessState == nil
 }
 
 func (this *App) RestartOnReturn() {
