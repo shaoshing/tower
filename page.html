@@ -47,6 +47,17 @@
       {{.Message}}
     </div>
 
+
+    {{if .ShowSnippet}}
+    <div class="snippet">
+      {{range .Snippet}}
+      <div class="line">{{.Number}}</div><div class="code {{if .Current}}current{{end}}">{{.Code}}</div>
+      {{end}}
+      <div style="clear: both;"></div>
+    </div>
+    {{end}}
+
+
     {{if .ShowTrace}}
     <h2>Trace:</h2>
     <div class="trace">
