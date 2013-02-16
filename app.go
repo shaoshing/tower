@@ -52,6 +52,7 @@ func NewApp(mainFile, port string) (app App) {
 func (this *App) Start() (err error) {
 	err = this.Build()
 	if err != nil {
+		fmt.Println("== Fail to build " + this.Name)
 		return
 	}
 
@@ -62,6 +63,7 @@ func (this *App) Start() (err error) {
 
 	err = this.Cmd.Start()
 	if err != nil {
+		fmt.Println("== Fail to start " + this.Name)
 		return
 	}
 
@@ -93,6 +95,7 @@ func (this *App) Build() (err error) {
 	out, _ := exec.Command("go", "build", "-o", AppBin, this.MainFile).CombinedOutput()
 	if len(out) > 0 {
 		msg := strings.Replace(string(out), "# command-line-arguments\n", "", 1)
+		fmt.Printf("----------- Build Error -----------\n%s-----------------------------------\n", msg)
 		return errors.New(msg)
 	}
 	return nil
