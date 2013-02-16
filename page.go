@@ -40,32 +40,16 @@ func RenderAppError(w http.ResponseWriter, app *App, errMessage string) {
 	//   to: Validation Error
 	message[0] = string(regexp.MustCompile(`.+\d+\.\d+.\d+.\d+\:\d+\:`).ReplaceAll([]byte(message[0]), []byte("")))
 	info.Message = template.HTML(strings.Join(message, "\n"))
-
 	info.Trace = trace
 	info.ShowTrace = true
 
 	// from: test/server1.go:16 (0x211e)
 	//	 to: [test/server1.go, 16]
 	appFileInfo := strings.Split(strings.Split(trace[appIndex].File, " ")[0], ":")
-	// read the file
-	content, err := ioutil.ReadFile(appFileInfo[0])
-	if err != nil {
-		panic(err)
-	}
-	lines := strings.Split(string(content), "\n")
-	curLineNum, _ := strconv.ParseInt(appFileInfo[1], 10, 8)
-	var snippet []Snippet
-	for lineNum := curLineNum - SnippetLineNumbers/2; lineNum <= curLineNum+SnippetLineNumbers/2; lineNum++ {
-		if int64(len(lines)) >= lineNum {
-			c := html.EscapeString(lines[lineNum-1])
-			c = strings.Replace(c, "\t", "&nbsp;&nbsp;&nbsp;&nbsp;", -1)
-			c = strings.Replace(c, " ", "&nbsp;", -1)
-			snippet = append(snippet, Snippet{int(lineNum), template.HTML(c), lineNum == curLineNum})
-		}
-	}
 	info.SnippetPath = appFileInfo[0]
 	info.ShowSnippet = true
-	info.Snippet = snippet
+	curLineNum, _ := strconv.ParseInt(appFileInfo[1], 10, 8)
+	info.Snippet = extractAppSnippet(appFileInfo[0], int(curLineNum))
 
 	info.Prepare()
 	renderPage(w, info)
@@ -122,6 +106,23 @@ func extractAppErrorInfo(errMessage string) (message []string, trace []Trace, ap
 		//   to: /Users/user/tower/test/server1.go:16
 		t.File = string(regexp.MustCompile(`\(.+\)$`).ReplaceAll([]byte(t.File), []byte("")))
 		trace = append(trace, t)
+	}
+	return
+}
+
+func extractAppSnippet(appFile string, curLineNum int) (snippet []Snippet) {
+	content, err := ioutil.ReadFile(appFile)
+	if err != nil {
+		panic(err)
+	}
+	lines := strings.Split(string(content), "\n")
+	for lineNum := curLineNum - SnippetLineNumbers/2; lineNum <= curLineNum+SnippetLineNumbers/2; lineNum++ {
+		if len(lines) >= lineNum {
+			c := html.EscapeString(lines[lineNum-1])
+			c = strings.Replace(c, "\t", "&nbsp;&nbsp;&nbsp;&nbsp;", -1)
+			c = strings.Replace(c, " ", "&nbsp;", -1)
+			snippet = append(snippet, Snippet{lineNum, template.HTML(c), lineNum == curLineNum})
+		}
 	}
 	return
 }
