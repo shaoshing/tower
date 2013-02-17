@@ -40,10 +40,10 @@ func TestCmd(t *testing.T) {
 
 	defer exec.Command("git", "checkout", "test").Run()
 
-	exec.Command("cp", "test/files/server2.go", "test/server1.go").Run()
+	exec.Command("cp", "test/files/server2.go_", "test/server1.go").Run()
 	assert.Equal("server 2", get("http://127.0.0.1:8000/"))
 
-	exec.Command("cp", "test/files/error.go", "test/server1.go").Run()
+	exec.Command("cp", "test/files/error.go_", "test/server1.go").Run()
 	assert.Match("Build Error", get("http://127.0.0.1:8000/"))
 }
 
