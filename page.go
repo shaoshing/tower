@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -15,8 +17,11 @@ import (
 var errorTemplate *template.Template
 
 func init() {
+	_, filename, _, _ := runtime.Caller(1)
+	pkgPath := path.Dir(filename)
+	templatePath := pkgPath + "/page.html"
+
 	var err error
-	templatePath := os.Getenv("GOPATH") + "/src/github.com/shaoshing/tower/page.html"
 	errorTemplate, err = template.ParseFiles(templatePath)
 	if err != nil {
 		panic(err)
