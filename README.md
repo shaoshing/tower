@@ -2,6 +2,8 @@
 
 Recompile your web server automatically when file changed.
 
+[![Build Status](https://travis-ci.org/shaoshing/tower.png?branch=master)](https://travis-ci.org/shaoshing/tower)
+
 ## Install
 ```bash
 go install github.com/shaoshing/tower
@@ -13,4 +15,6 @@ tower init
 
 ![Demo Usage](site/demo.gif)
 
-(loading gif image)
+## License
+
+Tower is released under the [MIT License](http://www.opensource.org/licenses/MIT).
