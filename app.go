@@ -24,6 +24,12 @@ type App struct {
 	Root      string
 	KeyPress  bool
 	LastError string
+	State     AppState
+}
+
+type AppState struct {
+	Queue      []chan bool
+	Restarting bool
 }
 
 type StderrCapturer struct {
@@ -80,6 +86,17 @@ func (this *App) Start() (err error) {
 }
 
 func (this *App) Restart() (err error) {
+	if this.State.Restarting {
+		this.State.Wait()
+		return
+	}
+
+	this.State.Restarting = true
+	defer func() {
+		this.State.Restarting = false
+		this.State.Signal()
+	}()
+
 	this.Stop()
 	return this.Start()
 }
@@ -133,4 +150,17 @@ func (this *App) RestartOnReturn() {
 		this.Stop()
 		os.Exit(0)
 	}()
+}
+
+func (this *AppState) Wait() {
+	wait := make(chan bool)
+	this.Queue = append(this.Queue, wait)
+	<-wait
+}
+
+func (this *AppState) Signal() {
+	for len(this.Queue) != 0 {
+		this.Queue[0] <- true
+		this.Queue = this.Queue[1:]
+	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/shaoshing/gotest"
 	"io/ioutil"
 	"net/http"
@@ -16,7 +17,10 @@ func TestCmd(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer stopTower()
+	defer func() {
+		stopTower()
+		fmt.Println("\n\n\n\n\n")
+	}()
 
 	assert.Equal("server 1", get("http://127.0.0.1:8000/"))
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
