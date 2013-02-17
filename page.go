@@ -24,7 +24,7 @@ func init() {
 }
 
 func RenderBuildError(w http.ResponseWriter, app *App, message string) {
-	info := ErrorInfo{Title: "Build Error" + app.Name, Message: template.HTML(message)}
+	info := ErrorInfo{Title: "Build Error", Message: template.HTML(message)}
 	info.Prepare()
 
 	renderPage(w, info)
