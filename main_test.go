@@ -28,8 +28,7 @@ func TestCmd(t *testing.T) {
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
 
 	// test app exits unexpectedly
-	get("http://127.0.0.1:8000/exit")
-	assert.Equal("server 1", get("http://127.0.0.1:8000/")) // should restart the application
+	assert.Contain("App quit unexpetedly", get("http://127.0.0.1:8000/exit")) // should restart the application
 
 	// test error page
 	highlightCode := `<strong>&nbsp;&nbsp;&nbsp;&nbsp;`
