@@ -35,22 +35,23 @@ func (this *Proxy) Listen() (err error) {
 }
 
 func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
+	mw := ResponseWriterWrapper{0, w}
 	this.logStartRequest(r)
-	defer this.logEndRequest(w, r, time.Now())
+	defer this.logEndRequest(&mw, r, time.Now())
 
 	if !this.App.IsRunning() || this.Watcher.Changed {
 		err := this.App.Restart()
 		if err != nil {
-			RenderBuildError(w, this.App, err.Error())
+			RenderBuildError(&mw, this.App, err.Error())
 			return
 		}
 		this.Watcher.Reset()
 	}
 
 	app.LastError = ""
-	this.ReserveProxy.ServeHTTP(w, r)
+	this.ReserveProxy.ServeHTTP(&mw, r)
 	if len(app.LastError) != 0 {
-		RenderAppError(w, this.App, app.LastError)
+		RenderAppError(&mw, this.App, app.LastError)
 	}
 }
 
@@ -68,9 +69,19 @@ func (this *Proxy) logStartRequest(r *http.Request) {
 	}
 }
 
-func (this *Proxy) logEndRequest(w http.ResponseWriter, r *http.Request, startTime time.Time) {
-	// TODO: display status code
+func (this *Proxy) logEndRequest(mw *ResponseWriterWrapper, r *http.Request, startTime time.Time) {
 	if !this.isStaticRequest(r.RequestURI) {
-		fmt.Printf("Completed in %dms\n", time.Since(startTime)/time.Millisecond)
+		fmt.Printf("Completed %d in %dms\n", mw.Status, time.Since(startTime)/time.Millisecond)
 	}
+}
+
+// A response Wrapper to capture request's status code.
+type ResponseWriterWrapper struct {
+	Status int
+	http.ResponseWriter
+}
+
+func (this *ResponseWriterWrapper) WriteHeader(status int) {
+	this.Status = status
+	this.ResponseWriter.WriteHeader(status)
 }
