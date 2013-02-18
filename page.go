@@ -65,7 +65,6 @@ func renderPage(w http.ResponseWriter, info ErrorInfo) {
 	if err != nil {
 		panic(err)
 	}
-	w.WriteHeader(http.StatusInternalServerError)
 }
 
 // Example input
