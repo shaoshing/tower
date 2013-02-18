@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -77,8 +79,23 @@ func (this *Proxy) logStartRequest(r *http.Request) {
 	}
 }
 
+type MyReadCloser struct {
+	bytes.Buffer
+}
+
+func (this *MyReadCloser) Close() error {
+	return nil
+}
+
 func (this *Proxy) formatRequestParams(r *http.Request) string {
+	// Keep an copy of request Body, and restore it after parsed form.
+	var b1, b2 MyReadCloser
+	io.Copy(&b1, r.Body)
+	io.Copy(&b2, &b1)
+	r.Body = &b1
 	r.ParseForm()
+	r.Body = &b2
+
 	if r.Form == nil {
 		return ""
 	}
