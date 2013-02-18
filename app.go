@@ -66,22 +66,30 @@ func (this *App) Start() (err error) {
 		return
 	}
 
-	fmt.Println("== Starting " + this.Name)
+	err = this.Run()
+	if err != nil {
+		return errors.New("Fail to run " + this.Name)
+	}
+
+	this.RestartOnReturn()
+	return
+}
+
+func (this *App) Run() (err error) {
+	_, err = os.Stat(AppBin)
+	if err != nil {
+		return
+	}
+
+	fmt.Println("== Running " + this.Name)
 	this.Cmd = exec.Command(AppBin)
 	this.Cmd.Stdout = os.Stdout
 	this.Cmd.Stderr = StderrCapturer{this}
-
 	go func() {
 		this.Cmd.Run()
 	}()
 
 	err = dialAddress("127.0.0.1:"+this.Port, 60)
-	if err != nil {
-		return errors.New("Fail to start " + this.Name)
-	}
-
-	this.RestartOnReturn()
-
 	return
 }
 
@@ -122,6 +130,10 @@ func (this *App) Build() (err error) {
 
 func (this *App) IsRunning() bool {
 	return this.Cmd != nil && this.Cmd.ProcessState == nil
+}
+
+func (this *App) IsQuit() bool {
+	return this.Cmd != nil && this.Cmd.ProcessState != nil
 }
 
 func (this *App) RestartOnReturn() {
