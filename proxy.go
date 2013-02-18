@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -62,11 +63,30 @@ func (this *Proxy) isStaticRequest(uri string) bool {
 }
 
 func (this *Proxy) logStartRequest(r *http.Request) {
-	// TODO:
-	// display params
 	if !this.isStaticRequest(r.RequestURI) {
 		fmt.Printf("\n\n\nStarted %s \"%s\" at %s\n", r.Method, r.RequestURI, time.Now().Format("2006-01-02 15:04:05 +700"))
+		params := this.formatRequestParams(r)
+		if len(params) > 0 {
+			fmt.Printf("  Parameters: %s\n", params)
+		}
 	}
+}
+
+func (this *Proxy) formatRequestParams(r *http.Request) string {
+	r.ParseForm()
+	if r.Form == nil {
+		return ""
+	}
+
+	var params []string
+	for key, vals := range r.Form {
+		var strVals []string
+		for _, val := range vals {
+			strVals = append(strVals, `"`+val+`"`)
+		}
+		params = append(params, `"`+key+`":[`+strings.Join(strVals, ", ")+`]`)
+	}
+	return strings.Join(params, ", ")
 }
 
 func (this *Proxy) logEndRequest(mw *ResponseWriterWrapper, r *http.Request, startTime time.Time) {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/exec"
 	"testing"
+	"time"
 )
 
 func TestCmd(t *testing.T) {
@@ -23,6 +24,7 @@ func TestCmd(t *testing.T) {
 	}()
 
 	assert.Equal("server 1", get("http://127.0.0.1:8000/"))
+	assert.Equal("server 1", get("http://127.0.0.1:8000/?k=v1&k=v2&k1=v3")) // Test logging parameters
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
 
 	// test app exits unexpectedly
@@ -41,6 +43,7 @@ func TestCmd(t *testing.T) {
 	defer exec.Command("git", "checkout", "test").Run()
 
 	exec.Command("cp", "test/files/server2.go_", "test/server1.go").Run()
+	time.Sleep(100 * time.Millisecond)
 	assert.Equal("server 2", get("http://127.0.0.1:8000/"))
 
 	exec.Command("cp", "test/files/error.go_", "test/server1.go").Run()
