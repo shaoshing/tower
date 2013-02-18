@@ -60,7 +60,7 @@ func RenderAppError(w http.ResponseWriter, app *App, errMessage string) {
 	appFileInfo := strings.Split(strings.Split(trace[appIndex].File, " ")[0], ":")
 	info.SnippetPath = appFileInfo[0]
 	info.ShowSnippet = true
-	curLineNum, _ := strconv.ParseInt(appFileInfo[1], 10, 8)
+	curLineNum, _ := strconv.ParseInt(appFileInfo[1], 10, 16)
 	info.Snippet = extractAppSnippet(appFileInfo[0], int(curLineNum))
 
 	info.Prepare()
