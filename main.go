@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/kylelemons/go-gypsy/yaml"
+	"os"
 	"os/exec"
 	"path"
 	"runtime"
@@ -46,6 +47,13 @@ func startTower(configFile string) {
 
 	appMainFile, _ := config.Get("main")
 	appPort, _ := config.Get("port")
+
+	err = dialAddress("127.0.0.1:"+appPort, 1)
+	if err == nil {
+		fmt.Println("Error: port (" + appPort + ") already in used.")
+		os.Exit(0)
+	}
+
 	app = NewApp(appMainFile, appPort)
 	watcher = NewWatcher(app.Root)
 	proxy = NewProxy(&app, &watcher)
