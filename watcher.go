@@ -33,7 +33,7 @@ func (this *Watcher) Watch() (err error) {
 		}
 	}
 
-	expectedFileReg := regexp.MustCompile(`\.(go|html)`)
+	expectedFileReg := regexp.MustCompile(`\.(go|html)$`)
 	for {
 		file := <-this.Watcher.Event
 		if expectedFileReg.Match([]byte(file.Name)) {
