@@ -6,6 +6,7 @@ Recompile your web server automatically when file changed.
 
 ## Install
 ```bash
+go get github.com/shaoshing/tower
 go install github.com/shaoshing/tower
 cd your/project
 tower init
