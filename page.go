@@ -50,7 +50,11 @@ func RenderAppError(w http.ResponseWriter, app *App, errMessage string) {
 
 	// from: 2013/02/12 18:24:15 http: panic serving 127.0.0.1:54114: Validation Error
 	//   to: Validation Error
-	message[0] = string(regexp.MustCompile(`.+\d+\.\d+.\d+.\d+\:\d+\:`).ReplaceAll([]byte(message[0]), []byte("")))
+	message[0] = string(regexp.MustCompile(`.+\d+\.\d+.\d+.\d+\:\d+\: `).ReplaceAll([]byte(message[0]), []byte("")))
+	if !strings.Contains(message[0], "runtime error") {
+		message[0] = "panic: " + message[0]
+	}
+
 	info.Message = template.HTML(strings.Join(message, "\n"))
 	info.Trace = trace
 	info.ShowTrace = true

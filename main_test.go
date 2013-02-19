@@ -32,12 +32,12 @@ func TestCmd(t *testing.T) {
 
 	// test error page
 	highlightCode := `<strong>&nbsp;&nbsp;&nbsp;&nbsp;`
-	assert.Contain("Panic !!", get("http://127.0.0.1:8000/panic"))                       // should be able to detect panic
-	assert.Contain(highlightCode+`panic(errors.New`, get("http://127.0.0.1:8000/panic")) // should show code snippet
-	assert.Contain(`<strong>36`, get("http://127.0.0.1:8000/panic"))                     // should show line number
-	assert.Contain("index out of range", get("http://127.0.0.1:8000/error"))             // should be able to detect runtime error
-	assert.Contain(highlightCode+`paths[0]`, get("http://127.0.0.1:8000/error"))         // should show code snippet
-	assert.Contain(`<strong>17`, get("http://127.0.0.1:8000/error"))                     // should show line number
+	assert.Contain("panic: Panic !!", get("http://127.0.0.1:8000/panic"))                   // should be able to detect panic
+	assert.Contain(highlightCode+`panic(errors.New`, get("http://127.0.0.1:8000/panic"))    // should show code snippet
+	assert.Contain(`<strong>36`, get("http://127.0.0.1:8000/panic"))                        // should show line number
+	assert.Contain("runtime error: index out of range", get("http://127.0.0.1:8000/error")) // should be able to detect runtime error
+	assert.Contain(highlightCode+`paths[0]`, get("http://127.0.0.1:8000/error"))            // should show code snippet
+	assert.Contain(`<strong>17`, get("http://127.0.0.1:8000/error"))                        // should show line number
 
 	defer exec.Command("git", "checkout", "test").Run()
 
