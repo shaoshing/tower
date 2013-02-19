@@ -1,4 +1,4 @@
 
 
 go build -o tmp/tower .
-tmp/tower --config test/configs/tower.yml
+tmp/tower -c test/configs/tower.yml

@@ -10,9 +10,12 @@ import (
 	"runtime"
 )
 
-var appConfigFile = flag.String("config", "configs/tower.yml", "run \"tower init\" to get an example config.")
-
 func main() {
+	appConfigFile := flag.String("c", "", "run \"tower init\" to get an example config.")
+	appMainFile := flag.String("m", "main.go", "path to your app's main file.")
+	appPort := flag.String("p", "5000", "port of your app.")
+	verbose := flag.Bool("v", false, "show more stuff.")
+
 	flag.Parse()
 
 	args := flag.Args()
@@ -21,7 +24,7 @@ func main() {
 		return
 	}
 
-	startTower(*appConfigFile)
+	startTower(*appConfigFile, *appMainFile, *appPort, *verbose)
 }
 
 func generateExampleConfig() {
@@ -38,20 +41,27 @@ var (
 	proxy   Proxy
 )
 
-func startTower(configFile string) {
-	config, err := yaml.ReadFile(configFile)
-	if err != nil {
-		fmt.Println("You must have a tower.yml config file, run \"tower init\" to get an example config.")
-		return
+func startTower(configFile, appMainFile, appPort string, verbose bool) {
+	if len(configFile) != 0 {
+		config, err := yaml.ReadFile(configFile)
+		if err != nil {
+			fmt.Printf("Could not load config from %s\n", configFile)
+			os.Exit(1)
+		}
+		appMainFile, _ = config.Get("main")
+		appPort, _ = config.Get("port")
 	}
 
-	appMainFile, _ := config.Get("main")
-	appPort, _ := config.Get("port")
-
-	err = dialAddress("127.0.0.1:"+appPort, 1)
+	err := dialAddress("127.0.0.1:"+appPort, 1)
 	if err == nil {
 		fmt.Println("Error: port (" + appPort + ") already in used.")
-		os.Exit(0)
+		os.Exit(1)
+	}
+
+	if verbose {
+		fmt.Println("== Application Info")
+		fmt.Printf("  build app with: %s\n", appMainFile)
+		fmt.Printf("  redirect requests from localhost:%s to localhost:%s\n\n", ProxyPort, appPort)
 	}
 
 	app = NewApp(appMainFile, appPort)
