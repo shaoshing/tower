@@ -47,6 +47,7 @@ func (this *Watcher) Watch() (err error) {
 func (this *Watcher) dirsToWatch() (dirs []string) {
 	ignoredPathReg := regexp.MustCompile(`(public)|(\/\.\w+)|(^\.)|(\.\w+$)`)
 	matchedDirs := make(map[string]bool)
+	matchedDirs["./"] = true
 	filepath.Walk(this.WatchedDir, func(filePath string, info os.FileInfo, e error) (err error) {
 		if !info.IsDir() || ignoredPathReg.Match([]byte(filePath)) || matchedDirs[filePath] {
 			return
