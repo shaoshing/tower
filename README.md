@@ -37,6 +37,16 @@ vim config/tower.yml
 tower
 ```
 
+## Troubleshooting
+
+#### 'Too many open files'
+
+Run the following command to increase the number of files that a process can open:
+
+```bash
+ulimit -S -n 2048 # tested on OSX
+```
+
 ## How it works?
 
 ```
