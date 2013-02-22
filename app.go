@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	AppBin           = "tmp/tower-app"
+	AppBin           = "/tmp/tower-app"
 	HttpPanicMessage = "http: panic serving"
 )
 
