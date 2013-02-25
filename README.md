@@ -33,7 +33,7 @@ Or put them in a config file:
 
 ```bash
 tower init
-vim config/tower.yml
+vim .tower.yml
 tower
 ```
 
