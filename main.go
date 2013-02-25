@@ -36,9 +36,7 @@ func generateExampleConfig() {
 }
 
 var (
-	app     App
-	watcher Watcher
-	proxy   Proxy
+	app App
 )
 
 func startTower(appMainFile, appPort string, verbose bool) {
@@ -63,7 +61,7 @@ func startTower(appMainFile, appPort string, verbose bool) {
 		fmt.Printf("  redirect requests from localhost:%s to localhost:%s\n\n", ProxyPort, appPort)
 	}
 
-	app := NewApp(appMainFile, appPort)
+	app = NewApp(appMainFile, appPort)
 	watcher := NewWatcher(app.Root)
 	proxy := NewProxy(&app, &watcher)
 
@@ -71,8 +69,4 @@ func startTower(appMainFile, appPort string, verbose bool) {
 		mustSuccess(watcher.Watch())
 	}()
 	mustSuccess(proxy.Listen())
-}
-
-func stopTower() {
-	app.Stop()
 }

@@ -40,7 +40,7 @@ func (this StderrCapturer) Write(p []byte) (n int, err error) {
 	httpError := strings.Contains(string(p), HttpPanicMessage)
 
 	if httpError {
-		app.LastError = string(p)
+		this.app.LastError = string(p)
 		os.Stdout.Write([]byte("----------- Application Error -----------\n"))
 		n, err = os.Stdout.Write(p)
 		os.Stdout.Write([]byte("-----------------------------------------\n"))

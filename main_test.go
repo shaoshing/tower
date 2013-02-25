@@ -19,7 +19,7 @@ func TestCmd(t *testing.T) {
 		panic(err)
 	}
 	defer func() {
-		stopTower()
+		app.Stop()
 		fmt.Println("\n\n\n\n\n")
 	}()
 
