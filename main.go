@@ -10,8 +10,9 @@ import (
 	"runtime"
 )
 
+const ConfigName = ".tower.yml"
+
 func main() {
-	appConfigFile := flag.String("c", "", "run \"tower init\" to get an example config.")
 	appMainFile := flag.String("m", "main.go", "path to your app's main file.")
 	appPort := flag.String("p", "5000", "port of your app.")
 	verbose := flag.Bool("v", false, "show more stuff.")
@@ -24,15 +25,14 @@ func main() {
 		return
 	}
 
-	startTower(*appConfigFile, *appMainFile, *appPort, *verbose)
+	startTower(*appMainFile, *appPort, *verbose)
 }
 
 func generateExampleConfig() {
 	_, file, _, _ := runtime.Caller(0)
 	exampleConfig := path.Dir(file) + "/tower.yml"
-	exec.Command("mkdir", "-f", "configs").Run()
-	exec.Command("cp", exampleConfig, "configs/tower.yml").Run()
-	fmt.Println("Generated example config in configs/tower.yml")
+	exec.Command("cp", exampleConfig, ConfigName).Run()
+	fmt.Println("== Generated config file " + ConfigName)
 }
 
 var (
@@ -41,18 +41,17 @@ var (
 	proxy   Proxy
 )
 
-func startTower(configFile, appMainFile, appPort string, verbose bool) {
-	if len(configFile) != 0 {
-		config, err := yaml.ReadFile(configFile)
-		if err != nil {
-			fmt.Printf("Could not load config from %s\n", configFile)
-			os.Exit(1)
+func startTower(appMainFile, appPort string, verbose bool) {
+	config, err := yaml.ReadFile(ConfigName)
+	if err == nil {
+		if verbose {
+			fmt.Println("== Load config from " + ConfigName)
 		}
 		appMainFile, _ = config.Get("main")
 		appPort, _ = config.Get("port")
 	}
 
-	err := dialAddress("127.0.0.1:"+appPort, 1)
+	err = dialAddress("127.0.0.1:"+appPort, 1)
 	if err == nil {
 		fmt.Println("Error: port (" + appPort + ") already in used.")
 		os.Exit(1)
@@ -64,9 +63,9 @@ func startTower(configFile, appMainFile, appPort string, verbose bool) {
 		fmt.Printf("  redirect requests from localhost:%s to localhost:%s\n\n", ProxyPort, appPort)
 	}
 
-	app = NewApp(appMainFile, appPort)
-	watcher = NewWatcher(app.Root)
-	proxy = NewProxy(&app, &watcher)
+	app := NewApp(appMainFile, appPort)
+	watcher := NewWatcher(app.Root)
+	proxy := NewProxy(&app, &watcher)
 
 	go func() {
 		mustSuccess(watcher.Watch())

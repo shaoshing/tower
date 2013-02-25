@@ -13,7 +13,7 @@ import (
 func TestCmd(t *testing.T) {
 	assert.Test = t
 
-	go startTower("test/configs/tower.yml", "", "", true)
+	go startTower("", "", true)
 	err := dialAddress("127.0.0.1:8000", 60)
 	if err != nil {
 		panic(err)
