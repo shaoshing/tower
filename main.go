@@ -40,6 +40,8 @@ var (
 )
 
 func startTower(appMainFile, appPort string, verbose bool) {
+	watchedFiles := ""
+
 	config, err := yaml.ReadFile(ConfigName)
 	if err == nil {
 		if verbose {
@@ -47,6 +49,7 @@ func startTower(appMainFile, appPort string, verbose bool) {
 		}
 		appMainFile, _ = config.Get("main")
 		appPort, _ = config.Get("port")
+		watchedFiles, _ = config.Get("watch")
 	}
 
 	err = dialAddress("127.0.0.1:"+appPort, 1)
@@ -62,7 +65,7 @@ func startTower(appMainFile, appPort string, verbose bool) {
 	}
 
 	app = NewApp(appMainFile, appPort)
-	watcher := NewWatcher(app.Root)
+	watcher := NewWatcher(app.Root, watchedFiles)
 	proxy := NewProxy(&app, &watcher)
 
 	go func() {

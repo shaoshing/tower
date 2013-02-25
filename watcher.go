@@ -8,14 +8,22 @@ import (
 	"regexp"
 )
 
+const DefaultWatchedFiles = "go"
+
 type Watcher struct {
-	WatchedDir string
-	Changed    bool
-	Watcher    *fsnotify.Watcher
+	WatchedDir  string
+	Changed     bool
+	Watcher     *fsnotify.Watcher
+	FilePattern string
 }
 
-func NewWatcher(dir string) (w Watcher) {
+func NewWatcher(dir, filePattern string) (w Watcher) {
 	w.WatchedDir = dir
+	w.FilePattern = DefaultWatchedFiles
+	if len(filePattern) != 0 {
+		w.FilePattern = filePattern
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
@@ -33,7 +41,7 @@ func (this *Watcher) Watch() (err error) {
 		}
 	}
 
-	expectedFileReg := regexp.MustCompile(`\.(go|html)$`)
+	expectedFileReg := regexp.MustCompile(`\.(` + this.FilePattern + `)$`)
 	for {
 		file := <-this.Watcher.Event
 		if expectedFileReg.Match([]byte(file.Name)) {

@@ -1,2 +1,8 @@
-main: main.go
-port: 5000
+
+# file name of the "go run" command
+main:  main.go
+
+port:  5000
+
+# file types to watch for changes in. use "|" to separate multiple types, for example, go|html
+watch: go
