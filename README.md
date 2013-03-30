@@ -1,8 +1,8 @@
 # Tower
 
-Tower makes your web development with Golang much more dynamic by monitoring your project file's changes and
-re-run your app - yes, no more stopping and running manually! It will also show any compile error, panic
-and runtime error through a clean html page (see the demo below).
+Tower makes your Go web development much more dynamic by monitoring file's changes in your project and then re-run your 
+app to apply those changes – yeah, no more stopping and running manually! It will also show compiler error, panic and 
+runtime error through a clean page (see the demo below).
 
 [![Build Status](https://travis-ci.org/shaoshing/tower.png?branch=master)](https://travis-ci.org/shaoshing/tower)
 
@@ -13,7 +13,6 @@ Watch at [Youtube](http://youtu.be/QRg7yWn1jzI)
 ## Install
 ```bash
 go get github.com/shaoshing/tower
-go install github.com/shaoshing/tower
 ```
 
 ## Usage
@@ -50,16 +49,17 @@ ulimit -S -n 2048 # tested on OSX
 ## How it works?
 
 ```
-localhost:8000
+browser: http://localhost:8000
       \/
-tower (listening to 8080)
-      \/ (redirect)
-your web app (listening to 5000)
+tower (listening 8000)
+      \/ (reverse proxy)
+your web app (listening 5000)
 ```
 
-When handling request of localhost:8000, tower is actually redirecting the request to your app by using Golang's _httputil.ReverseProxy_.
-For the first request, tower will first compile and run your app in a child process. And for the subsequent requests, tower will rerun your app
-if it find any change (using github.com/howeyc/fsnotify).
+Any request comes from localhost:8000 will be handled by Tower and then be redirected to your app. The redirection is 
+done by using _[httputil.ReverseProxy](http://golang.org/pkg/net/http/httputil/#ReverseProxy)_. Before redirecting the request, Tower will compile and run your app in 
+another process if your app heaven't been run or there is file been changed; Tower is using 
+_[howeyc/fsnotify](https://github.com/howeyc/fsnotify)_ to monitor file changes.
 
 ## License
 
