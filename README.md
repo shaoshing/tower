@@ -1,7 +1,7 @@
 # Tower
 
-Tower makes your Go web development much more dynamic by monitoring file's changes in your project and then re-run your 
-app to apply those changes – yeah, no more stopping and running manually! It will also show compiler error, panic and 
+Tower makes your Go web development much more dynamic by monitoring file's changes in your project and then re-run your
+app to apply those changes – yeah, no more stopping and running manually! It will also show compiler error, panic and
 runtime error through a clean page (see the demo below).
 
 [![Build Status](https://travis-ci.org/shaoshing/tower.png?branch=master)](https://travis-ci.org/shaoshing/tower)
@@ -43,7 +43,7 @@ tower
 Run the following command to increase the number of files that a process can open:
 
 ```bash
-ulimit -S -n 2048 # tested on OSX
+ulimit -S -n 2048 # OSX
 ```
 
 ## How it works?
@@ -56,9 +56,9 @@ tower (listening 8000)
 your web app (listening 5000)
 ```
 
-Any request comes from localhost:8000 will be handled by Tower and then be redirected to your app. The redirection is 
-done by using _[httputil.ReverseProxy](http://golang.org/pkg/net/http/httputil/#ReverseProxy)_. Before redirecting the request, Tower will compile and run your app in 
-another process if your app heaven't been run or there is file been changed; Tower is using 
+Any request comes from localhost:8000 will be handled by Tower and then be redirected to your app. The redirection is
+done by using _[httputil.ReverseProxy](http://golang.org/pkg/net/http/httputil/#ReverseProxy)_. Before redirecting the request, Tower will compile and run your app in
+another process if your app hasn't been run or file has been changed; Tower is using
 _[howeyc/fsnotify](https://github.com/howeyc/fsnotify)_ to monitor file changes.
 
 ## License
