@@ -8,13 +8,18 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
-	AppBin           = "/tmp/tower-app"
 	HttpPanicMessage = "http: panic serving"
+)
+
+var (
+	AppBin = "/tmp/tower-app-" + strconv.FormatInt(time.Now().Unix(), 10)
 )
 
 type App struct {
@@ -94,6 +99,7 @@ func (this *App) Restart() (err error) {
 
 func (this *App) Stop() {
 	if this.IsRunning() {
+		os.Remove(AppBin)
 		fmt.Println("== Stopping " + this.Name)
 		this.Cmd.Process.Kill()
 		this.Cmd = nil
