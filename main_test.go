@@ -27,6 +27,24 @@ func TestCmd(t *testing.T) {
 	assert.Equal("server 1", get("http://127.0.0.1:8000/?k=v1&k=v2&k1=v3")) // Test logging parameters
 	assert.Equal("server 1", get("http://127.0.0.1:5000/"))
 
+	app.Stop()
+	concurrency := 10
+	compileChan := make(chan bool)
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			get("http://127.0.0.1:8000/")
+			compileChan <- true
+		}()
+	}
+
+	for i := 0; i < concurrency; i++ {
+		select {
+		case <-compileChan:
+		case <-time.After(10 * time.Second):
+			assert.TrueM(false, "Timeout on concurrency testing.")
+		}
+	}
+
 	// test app exits unexpectedly
 	assert.Contain("App quit unexpetedly", get("http://127.0.0.1:8000/exit")) // should restart the application
 

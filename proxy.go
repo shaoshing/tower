@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type Proxy struct {
 	App          *App
 	ReserveProxy *httputil.ReverseProxy
 	Watcher      *Watcher
+	FirstRequest *sync.Once
 }
 
 func NewProxy(app *App, watcher *Watcher) (proxy Proxy) {
@@ -30,6 +32,7 @@ func (this *Proxy) Listen() (err error) {
 	fmt.Println("== Listening to http://localhost" + ProxyPort)
 	url, _ := url.ParseRequestURI("http://localhost:" + this.App.Port)
 	this.ReserveProxy = httputil.NewSingleHostReverseProxy(url)
+	this.FirstRequest = &sync.Once{}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		this.ServeRequest(w, r)
@@ -38,7 +41,7 @@ func (this *Proxy) Listen() (err error) {
 }
 
 func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
-	mw := ResponseWriterWrapper{0, w}
+	mw := ResponseWriterWrapper{ResponseWriter: w}
 	this.logStartRequest(r)
 	defer this.logEndRequest(&mw, r, time.Now())
 
@@ -49,10 +52,19 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 			RenderBuildError(&mw, this.App, err.Error())
 			return
 		}
+
+		this.FirstRequest.Do(func() {
+			this.ReserveProxy.ServeHTTP(&mw, r)
+			this.FirstRequest = &sync.Once{}
+		})
 	}
 
 	this.App.LastError = ""
-	this.ReserveProxy.ServeHTTP(&mw, r)
+
+	if !mw.Processed {
+		this.ReserveProxy.ServeHTTP(&mw, r)
+	}
+
 	if len(this.App.LastError) != 0 {
 		RenderAppError(&mw, this.App, this.App.LastError)
 	}
@@ -120,11 +132,13 @@ func (this *Proxy) logEndRequest(mw *ResponseWriterWrapper, r *http.Request, sta
 
 // A response Wrapper to capture request's status code.
 type ResponseWriterWrapper struct {
-	Status int
+	Status    int
+	Processed bool
 	http.ResponseWriter
 }
 
 func (this *ResponseWriterWrapper) WriteHeader(status int) {
 	this.Status = status
+	this.Processed = true
 	this.ResponseWriter.WriteHeader(status)
 }
