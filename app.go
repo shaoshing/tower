@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path"
 	"strings"
+	"sync"
 )
 
 const (
@@ -24,12 +25,9 @@ type App struct {
 	Root      string
 	KeyPress  bool
 	LastError string
-	State     AppState
-}
 
-type AppState struct {
-	Queue      []chan bool
-	Restarting bool
+	start   *sync.Once
+	restart *sync.Once
 }
 
 type StderrCapturer struct {
@@ -56,26 +54,53 @@ func NewApp(mainFile, port string) (app App) {
 	wd, _ := os.Getwd()
 	app.Name = path.Base(wd)
 	app.Root = path.Dir(mainFile)
+	app.start = &sync.Once{}
+	app.restart = &sync.Once{}
 	return
 }
 
-func (this *App) Start() (err error) {
-	err = this.Build()
-	if err != nil {
-		fmt.Println("== Fail to build " + this.Name)
-		return
-	}
+func (this *App) Start(build bool) (err error) {
+	this.start.Do(func() {
+		if build {
+			err = this.build()
+			if err != nil {
+				fmt.Println("== Fail to build " + this.Name)
+				return
+			}
+		}
 
-	err = this.Run()
-	if err != nil {
-		return errors.New("Fail to run " + this.Name)
-	}
+		err = this.run()
+		if err != nil {
+			err = errors.New("Fail to run " + this.Name)
+			return
+		}
 
-	this.RestartOnReturn()
+		this.RestartOnReturn()
+		this.start = &sync.Once{} // Assign new Once to allow calling Start again.
+	})
+
 	return
 }
 
-func (this *App) Run() (err error) {
+func (this *App) Restart() (err error) {
+	this.restart.Do(func() {
+		this.Stop()
+		err = this.Start(true)
+		this.restart = &sync.Once{} // Assign new Once to allow calling Start again.
+	})
+
+	return
+}
+
+func (this *App) Stop() {
+	if this.IsRunning() {
+		fmt.Println("== Stopping " + this.Name)
+		this.Cmd.Process.Kill()
+		this.Cmd = nil
+	}
+}
+
+func (this *App) run() (err error) {
 	_, err = os.Stat(AppBin)
 	if err != nil {
 		return
@@ -93,31 +118,7 @@ func (this *App) Run() (err error) {
 	return
 }
 
-func (this *App) Restart() (err error) {
-	if this.State.Restarting {
-		this.State.Wait()
-		return
-	}
-
-	this.State.Restarting = true
-	defer func() {
-		this.State.Restarting = false
-		this.State.Signal()
-	}()
-
-	this.Stop()
-	return this.Start()
-}
-
-func (this *App) Stop() {
-	if this.IsRunning() {
-		fmt.Println("== Stopping " + this.Name)
-		this.Cmd.Process.Kill()
-		this.Cmd = nil
-	}
-}
-
-func (this *App) Build() (err error) {
+func (this *App) build() (err error) {
 	fmt.Println("== Building " + this.Name)
 	out, _ := exec.Command("go", "build", "-o", AppBin, this.MainFile).CombinedOutput()
 	if len(out) > 0 {
@@ -162,17 +163,4 @@ func (this *App) RestartOnReturn() {
 		this.Stop()
 		os.Exit(0)
 	}()
-}
-
-func (this *AppState) Wait() {
-	wait := make(chan bool)
-	this.Queue = append(this.Queue, wait)
-	<-wait
-}
-
-func (this *AppState) Signal() {
-	for len(this.Queue) != 0 {
-		this.Queue[0] <- true
-		this.Queue = this.Queue[1:]
-	}
 }

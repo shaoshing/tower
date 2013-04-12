@@ -43,12 +43,12 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	defer this.logEndRequest(&mw, r, time.Now())
 
 	if !this.App.IsRunning() || this.Watcher.Changed {
+		this.Watcher.Reset()
 		err := this.App.Restart()
 		if err != nil {
 			RenderBuildError(&mw, this.App, err.Error())
 			return
 		}
-		this.Watcher.Reset()
 	}
 
 	this.App.LastError = ""
@@ -56,9 +56,10 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	if len(this.App.LastError) != 0 {
 		RenderAppError(&mw, this.App, this.App.LastError)
 	}
+
 	if this.App.IsQuit() {
 		fmt.Println("== App quit unexpetedly")
-		this.App.Run()
+		this.App.Start(false)
 		RenderError(&mw, this.App, "App quit unexpetedly.")
 	}
 }
