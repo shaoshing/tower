@@ -31,8 +31,10 @@ type App struct {
 	KeyPress  bool
 	LastError string
 
-	start   *sync.Once
-	restart *sync.Once
+	start      *sync.Once
+	startErr   error
+	restart    *sync.Once
+	restartErr error
 }
 
 type StderrCapturer struct {
@@ -64,37 +66,39 @@ func NewApp(mainFile, port string) (app App) {
 	return
 }
 
-func (this *App) Start(build bool) (err error) {
+func (this *App) Start(build bool) error {
 	this.start.Do(func() {
 		if build {
-			err = this.build()
-			if err != nil {
+			this.startErr = this.build()
+			if this.startErr != nil {
 				fmt.Println("== Fail to build " + this.Name)
+				this.start = &sync.Once{}
 				return
 			}
 		}
 
-		err = this.run()
-		if err != nil {
-			err = errors.New("Fail to run " + this.Name)
+		this.startErr = this.run()
+		if this.startErr != nil {
+			this.startErr = errors.New("Fail to run " + this.Name)
+			this.start = &sync.Once{}
 			return
 		}
 
 		this.RestartOnReturn()
-		this.start = &sync.Once{} // Assign new Once to allow calling Start again.
+		this.start = &sync.Once{}
 	})
 
-	return
+	return this.startErr
 }
 
-func (this *App) Restart() (err error) {
+func (this *App) Restart() error {
 	this.restart.Do(func() {
 		this.Stop()
-		err = this.Start(true)
+		this.restartErr = this.Start(true)
 		this.restart = &sync.Once{} // Assign new Once to allow calling Start again.
 	})
 
-	return
+	return this.restartErr
 }
 
 func (this *App) Stop() {
