@@ -1,9 +1,16 @@
 
 # file name of the "go run" command
-main:  test/server1.go
+main:  main.go
 
-app_port:  5000
-pxy_port:  8080
+#你的项目在本机运行端口
+app_port:       5000
+
+#go build -o 命令生成的二进制文件保存位置
+app_buildDir:   ""
+
+#你的项目对外公开访问的端口
+pxy_port:       8080
 
 # file types to watch for changes in. use "|" to separate multiple types, for example, go|html
 watch: go
+

@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/kylelemons/go-gypsy/yaml"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
+
+	"gopkg.in/yaml.v1"
 )
 
 const ConfigName = ".tower.yml"
@@ -42,16 +44,21 @@ var (
 
 func startTower(appMainFile, appPort, pxyPort string, verbose bool) {
 	watchedFiles := ""
-
-	config, err := yaml.ReadFile(ConfigName)
-	if err == nil {
-		if verbose {
-			fmt.Println("== Load config from " + ConfigName)
+	appBuildDir := ""
+	contents, err := ioutil.ReadFile(ConfigName)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		newmap := map[string]string{}
+		yamlErr := yaml.Unmarshal(contents, &newmap)
+		if yamlErr != nil {
+			fmt.Println(yamlErr)
 		}
-		appMainFile, _ = config.Get("main")
-		appPort, _ = config.Get("app_port")
-		pxyPort, _ = config.Get("pxy_port")
-		watchedFiles, _ = config.Get("watch")
+		appMainFile, _ = newmap["main"]
+		appPort, _ = newmap["app_port"]
+		pxyPort, _ = newmap["pxy_port"]
+		appBuildDir, _ = newmap["app_buildDir"]
+		watchedFiles, _ = newmap["watch"]
 	}
 
 	err = dialAddress("127.0.0.1:"+appPort, 1)
@@ -66,8 +73,17 @@ func startTower(appMainFile, appPort, pxyPort string, verbose bool) {
 		fmt.Printf("  redirect requests from localhost:%s to localhost:%s\n\n", ProxyPort, appPort)
 	}
 
-	app = NewApp(appMainFile, appPort)
+	app = NewApp(appMainFile, appPort, appBuildDir)
 	watcher := NewWatcher(app.Root, watchedFiles)
+	watcher.OnChanged = func(file string) {
+		app.FinishedBuild = false
+		err := app.Build()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		app.FinishedBuild = true
+	}
 	proxy := NewProxy(&app, &watcher)
 	proxy.Port = pxyPort
 	go func() {

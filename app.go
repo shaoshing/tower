@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,17 +21,19 @@ const (
 )
 
 var (
-	AppBin = "/tmp/tower-app-" + strconv.FormatInt(time.Now().Unix(), 10)
+	AppBin = "tower-app-" + strconv.FormatInt(time.Now().Unix(), 10)
 )
 
 type App struct {
-	Cmd       *exec.Cmd
-	MainFile  string
-	Port      string
-	Name      string
-	Root      string
-	KeyPress  bool
-	LastError string
+	Cmd           *exec.Cmd
+	MainFile      string
+	Port          string
+	BuildDir      string
+	Name          string
+	Root          string
+	KeyPress      bool
+	LastError     string
+	FinishedBuild bool
 
 	start      *sync.Once
 	startErr   error
@@ -55,9 +59,10 @@ func (this StderrCapturer) Write(p []byte) (n int, err error) {
 	return
 }
 
-func NewApp(mainFile, port string) (app App) {
+func NewApp(mainFile, port, buildDir string) (app App) {
 	app.MainFile = mainFile
 	app.Port = port
+	app.BuildDir = buildDir
 	wd, _ := os.Getwd()
 	app.Name = path.Base(wd)
 	app.Root = path.Dir(mainFile)
@@ -69,7 +74,7 @@ func NewApp(mainFile, port string) (app App) {
 func (this *App) Start(build bool) error {
 	this.start.Do(func() {
 		if build {
-			this.startErr = this.build()
+			this.startErr = this.Build()
 			if this.startErr != nil {
 				fmt.Println("== Fail to build " + this.Name)
 				this.start = &sync.Once{}
@@ -77,7 +82,7 @@ func (this *App) Start(build bool) error {
 			}
 		}
 
-		this.startErr = this.run()
+		this.startErr = this.Run()
 		if this.startErr != nil {
 			this.startErr = errors.New("Fail to run " + this.Name)
 			this.start = &sync.Once{}
@@ -94,30 +99,44 @@ func (this *App) Start(build bool) error {
 func (this *App) Restart() error {
 	this.restart.Do(func() {
 		this.Stop()
-		this.restartErr = this.Start(true)
+		this.restartErr = this.Start(this.FinishedBuild == false)
 		this.restart = &sync.Once{} // Assign new Once to allow calling Start again.
 	})
 
 	return this.restartErr
 }
 
+func (this *App) BinFile() (f string) {
+	if app.BuildDir != "" {
+		f = filepath.Join(app.BuildDir, AppBin)
+	} else {
+		f = AppBin
+	}
+	if runtime.GOOS == "windows" {
+		f += ".exe"
+	}
+	return
+}
+
 func (this *App) Stop() {
 	if this.IsRunning() {
-		os.Remove(AppBin)
+		if this.FinishedBuild == false {
+			os.Remove(this.BinFile())
+		}
 		fmt.Println("== Stopping " + this.Name)
 		this.Cmd.Process.Kill()
 		this.Cmd = nil
 	}
 }
 
-func (this *App) run() (err error) {
-	_, err = os.Stat(AppBin)
+func (this *App) Run() (err error) {
+	_, err = os.Stat(this.BinFile())
 	if err != nil {
 		return
 	}
 
 	fmt.Println("== Running " + this.Name)
-	this.Cmd = exec.Command(AppBin)
+	this.Cmd = exec.Command(this.BinFile())
 	this.Cmd.Stdout = os.Stdout
 	this.Cmd.Stderr = StderrCapturer{this}
 	go func() {
@@ -125,17 +144,20 @@ func (this *App) run() (err error) {
 	}()
 
 	err = dialAddress("127.0.0.1:"+this.Port, 60)
+	this.FinishedBuild = false
 	return
 }
 
-func (this *App) build() (err error) {
+func (this *App) Build() (err error) {
 	fmt.Println("== Building " + this.Name)
-	out, _ := exec.Command("go", "build", "-o", AppBin, this.MainFile).CombinedOutput()
+	AppBin = "tower-app-" + strconv.FormatInt(time.Now().Unix(), 10)
+	out, _ := exec.Command("go", "build", "-o", this.BinFile(), this.MainFile).CombinedOutput()
 	if len(out) > 0 {
 		msg := strings.Replace(string(out), "# command-line-arguments\n", "", 1)
 		fmt.Printf("----------- Build Error -----------\n%s-----------------------------------\n", msg)
 		return errors.New(msg)
 	}
+	fmt.Println("== Build completed")
 	return nil
 }
 
