@@ -15,6 +15,7 @@ const ConfigName = ".tower.yml"
 func main() {
 	appMainFile := flag.String("m", "main.go", "path to your app's main file.")
 	appPort := flag.String("p", "5000", "port of your app.")
+	pxyPort := flag.String("r", "8080", "proxy port of your app.")
 	verbose := flag.Bool("v", false, "show more stuff.")
 
 	flag.Parse()
@@ -25,7 +26,7 @@ func main() {
 		return
 	}
 
-	startTower(*appMainFile, *appPort, *verbose)
+	startTower(*appMainFile, *appPort, *pxyPort, *verbose)
 }
 
 func generateExampleConfig() {
@@ -39,7 +40,7 @@ var (
 	app App
 )
 
-func startTower(appMainFile, appPort string, verbose bool) {
+func startTower(appMainFile, appPort, pxyPort string, verbose bool) {
 	watchedFiles := ""
 
 	config, err := yaml.ReadFile(ConfigName)
@@ -48,7 +49,8 @@ func startTower(appMainFile, appPort string, verbose bool) {
 			fmt.Println("== Load config from " + ConfigName)
 		}
 		appMainFile, _ = config.Get("main")
-		appPort, _ = config.Get("port")
+		appPort, _ = config.Get("app_port")
+		pxyPort, _ = config.Get("pxy_port")
 		watchedFiles, _ = config.Get("watch")
 	}
 
@@ -67,7 +69,7 @@ func startTower(appMainFile, appPort string, verbose bool) {
 	app = NewApp(appMainFile, appPort)
 	watcher := NewWatcher(app.Root, watchedFiles)
 	proxy := NewProxy(&app, &watcher)
-
+	proxy.Port = pxyPort
 	go func() {
 		mustSuccess(watcher.Watch())
 	}()
