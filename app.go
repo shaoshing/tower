@@ -142,9 +142,8 @@ func (this *App) Run() (err error) {
 	go func() {
 		this.Cmd.Run()
 	}()
-
-	err = dialAddress("127.0.0.1:"+this.Port, 60)
 	this.FinishedBuild = false
+	err = dialAddress("127.0.0.1:"+this.Port, 60)
 	return
 }
 
