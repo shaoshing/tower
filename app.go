@@ -35,9 +35,9 @@ type App struct {
 	LastError     string
 	FinishedBuild bool
 
-	start      *sync.Once
+	BuildStart *sync.Once
 	startErr   error
-	restart    *sync.Once
+	AppRestart *sync.Once
 	restartErr error
 }
 
@@ -66,18 +66,18 @@ func NewApp(mainFile, port, buildDir string) (app App) {
 	wd, _ := os.Getwd()
 	app.Name = path.Base(wd)
 	app.Root = path.Dir(mainFile)
-	app.start = &sync.Once{}
-	app.restart = &sync.Once{}
+	app.BuildStart = &sync.Once{}
+	app.AppRestart = &sync.Once{}
 	return
 }
 
 func (this *App) Start(build bool) error {
-	this.start.Do(func() {
+	this.BuildStart.Do(func() {
 		if build {
 			this.startErr = this.Build()
 			if this.startErr != nil {
 				fmt.Println("== Fail to build " + this.Name)
-				this.start = &sync.Once{}
+				this.BuildStart = &sync.Once{}
 				return
 			}
 		}
@@ -85,22 +85,22 @@ func (this *App) Start(build bool) error {
 		this.startErr = this.Run()
 		if this.startErr != nil {
 			this.startErr = errors.New("Fail to run " + this.Name)
-			this.start = &sync.Once{}
+			this.BuildStart = &sync.Once{}
 			return
 		}
 
 		this.RestartOnReturn()
-		this.start = &sync.Once{}
+		this.BuildStart = &sync.Once{}
 	})
 
 	return this.startErr
 }
 
 func (this *App) Restart() error {
-	this.restart.Do(func() {
+	this.AppRestart.Do(func() {
 		this.Stop()
 		this.restartErr = this.Start(this.FinishedBuild == false)
-		this.restart = &sync.Once{} // Assign new Once to allow calling Start again.
+		this.AppRestart = &sync.Once{} // Assign new Once to allow calling Start again.
 	})
 
 	return this.restartErr

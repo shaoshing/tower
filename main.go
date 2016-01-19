@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"runtime"
+	"sync"
 
 	"gopkg.in/yaml.v1"
 )
@@ -76,13 +77,16 @@ func startTower(appMainFile, appPort, pxyPort string, verbose bool) {
 	app = NewApp(appMainFile, appPort, appBuildDir)
 	watcher := NewWatcher(app.Root, watchedFiles)
 	watcher.OnChanged = func(file string) {
-		app.FinishedBuild = false
-		err := app.Build()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		app.FinishedBuild = true
+		app.BuildStart.Do(func() {
+			app.FinishedBuild = false
+			err := app.Build()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				app.FinishedBuild = true
+			}
+			app.BuildStart = &sync.Once{}
+		})
 	}
 	proxy := NewProxy(&app, &watcher)
 	proxy.Port = pxyPort
