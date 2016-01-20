@@ -91,6 +91,9 @@ func (this *Watcher) dirsToWatch() (dirs []string) {
 	matchedDirs := make(map[string]bool)
 	matchedDirs["./"] = true
 	filepath.Walk(this.WatchedDir, func(filePath string, info os.FileInfo, e error) (err error) {
+		if e != nil {
+			return e
+		}
 		if !info.IsDir() || ignoredPathReg.Match([]byte(filePath)) {
 			return
 		}
