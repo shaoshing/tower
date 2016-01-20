@@ -13,23 +13,25 @@ import (
 	"time"
 )
 
-const ProxyPort = ":8000"
+const ProxyPort = "8080"
 
 type Proxy struct {
 	App          *App
 	ReserveProxy *httputil.ReverseProxy
 	Watcher      *Watcher
 	FirstRequest *sync.Once
+	Port         string
 }
 
 func NewProxy(app *App, watcher *Watcher) (proxy Proxy) {
 	proxy.App = app
 	proxy.Watcher = watcher
+	proxy.Port = ProxyPort
 	return
 }
 
 func (this *Proxy) Listen() (err error) {
-	fmt.Println("== Listening to http://localhost" + ProxyPort)
+	fmt.Println("== Listening to http://localhost:" + this.Port)
 	url, _ := url.ParseRequestURI("http://localhost:" + this.App.Port)
 	this.ReserveProxy = httputil.NewSingleHostReverseProxy(url)
 	this.FirstRequest = &sync.Once{}
@@ -37,7 +39,7 @@ func (this *Proxy) Listen() (err error) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		this.ServeRequest(w, r)
 	})
-	return http.ListenAndServe(ProxyPort, nil)
+	return http.ListenAndServe(":"+this.Port, nil)
 }
 
 func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +47,16 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	this.logStartRequest(r)
 	defer this.logEndRequest(&mw, r, time.Now())
 
-	if !this.App.IsRunning() || this.Watcher.Changed {
+	if this.App.SwitchToNewPort {
+		this.App.SwitchToNewPort = false
+		url, _ := url.ParseRequestURI("http://localhost:" + this.App.Port)
+		this.ReserveProxy = httputil.NewSingleHostReverseProxy(url)
+		this.FirstRequest.Do(func() {
+			this.ReserveProxy.ServeHTTP(&mw, r)
+			this.FirstRequest = &sync.Once{}
+		})
+		this.App.Clean()
+	} else if !this.App.IsRunning() || this.Watcher.Changed {
 		this.Watcher.Reset()
 		err := this.App.Restart()
 		if err != nil {
