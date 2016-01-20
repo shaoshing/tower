@@ -47,7 +47,16 @@ func (this *Proxy) ServeRequest(w http.ResponseWriter, r *http.Request) {
 	this.logStartRequest(r)
 	defer this.logEndRequest(&mw, r, time.Now())
 
-	if !this.App.IsRunning() || this.Watcher.Changed {
+	if this.App.SwitchToNewPort {
+		this.App.SwitchToNewPort = false
+		url, _ := url.ParseRequestURI("http://localhost:" + this.App.Port)
+		this.ReserveProxy = httputil.NewSingleHostReverseProxy(url)
+		this.FirstRequest.Do(func() {
+			this.ReserveProxy.ServeHTTP(&mw, r)
+			this.FirstRequest = &sync.Once{}
+		})
+		this.App.Clean()
+	} else if !this.App.IsRunning() || this.Watcher.Changed {
 		this.Watcher.Reset()
 		err := this.App.Restart()
 		if err != nil {
