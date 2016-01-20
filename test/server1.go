@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"io"
 	"log"
 	"net/http"
@@ -18,11 +19,14 @@ func Error(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	appPort := flag.String("p", "5000", "port of your app.")
+	flag.Parse()
+
 	http.HandleFunc("/panic", Panic)
 	http.HandleFunc("/error", Error)
 	http.HandleFunc("/exit", Exit)
 	http.HandleFunc("/", HelloServer)
-	err := http.ListenAndServe(":5000", nil)
+	err := http.ListenAndServe(":"+*appPort, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

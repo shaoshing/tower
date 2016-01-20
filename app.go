@@ -62,12 +62,13 @@ func (this StderrCapturer) Write(p []byte) (n int, err error) {
 	return
 }
 
-func NewApp(mainFile, port, buildDir string) (app App) {
+func NewApp(mainFile, port, buildDir, portParamName string) (app App) {
 	app.Cmds = make(map[string]*exec.Cmd)
 	app.MainFile = mainFile
-	app.Port = port
 	app.BuildDir = buildDir
-	app.ParseMutiPort()
+	app.PortParamName = portParamName
+	app.ParseMutiPort(port)
+	app.Port = app.UseRandPort()
 	wd, _ := os.Getwd()
 	app.Name = path.Base(wd)
 	app.Root = path.Dir(mainFile)
@@ -77,8 +78,8 @@ func NewApp(mainFile, port, buildDir string) (app App) {
 	return
 }
 
-func (this *App) ParseMutiPort() {
-	p := strings.Split(this.Port, `,`)
+func (this *App) ParseMutiPort(port string) {
+	p := strings.Split(port, `,`)
 	this.Ports = make([]string, 0)
 	for _, v := range p {
 		r := strings.Split(v, `-`)
@@ -94,12 +95,12 @@ func (this *App) ParseMutiPort() {
 	}
 }
 
-func (this *App) SupportMutiPort() string {
+func (this *App) SupportMutiPort() bool {
 	return this.Ports != nil && len(this.Ports) > 1 && this.PortParamName != ``
 }
 
 func (this *App) UseRandPort() string {
-	for i, port := range this.Ports {
+	for _, port := range this.Ports {
 		if port != this.Port {
 			return port
 		}
@@ -172,11 +173,10 @@ func (this *App) Stop(port string, args ...string) {
 
 func (this *App) Clean() {
 	for port, cmd := range this.Cmds {
-		if port == this.Port || !this.IsRunning(port) {
+		if port == this.Port || !CmdIsRunning(cmd) {
 			continue
 		}
 		fmt.Println("== Stopping app at port: " + port)
-		cmd := this.GetCmd(port)
 		cmd.Process.Kill()
 		cmd = nil
 		if bin, ok := this.portBinFiles[port]; ok && bin != "" {
@@ -253,13 +253,19 @@ func (this *App) Build() (err error) {
 }
 
 func (this *App) IsRunning(args ...string) bool {
-	cmd := this.GetCmd(args...)
+	return CmdIsRunning(this.GetCmd(args...))
+}
+
+func CmdIsRunning(cmd *exec.Cmd) bool {
 	return cmd != nil && cmd.ProcessState == nil
 }
 
-func (this *App) IsQuit(args ...string) bool {
-	cmd := this.GetCmd(args...)
+func CmdIsQuit(cmd *exec.Cmd) bool {
 	return cmd != nil && cmd.ProcessState != nil
+}
+
+func (this *App) IsQuit(args ...string) bool {
+	return CmdIsQuit(this.GetCmd(args...))
 }
 
 func (this *App) RestartOnReturn() {
@@ -285,7 +291,7 @@ func (this *App) RestartOnReturn() {
 		signal.Notify(sig, os.Interrupt)
 		<-sig // wait for the "^C" signal
 		fmt.Println("")
-		this.Stop()
+		this.Stop(this.Port)
 		os.Exit(0)
 	}()
 }
