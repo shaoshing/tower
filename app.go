@@ -180,7 +180,10 @@ func (this *App) Clean() {
 		cmd.Process.Kill()
 		cmd = nil
 		if bin, ok := this.portBinFiles[port]; ok && bin != "" {
-			os.Remove(bin)
+			err := os.Remove(bin)
+			if err != nil {
+				fmt.Sprintln(err)
+			}
 		}
 		delete(this.Cmds, port)
 		delete(this.portBinFiles, port)
