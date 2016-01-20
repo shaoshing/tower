@@ -105,7 +105,6 @@ func startTower(appMainFile, appPort, pxyPort, appBuildDir, portParamName, confi
 			fmt.Println(err)
 			return
 		}
-		app.SwitchToNewPort = true
 	}
 	proxy := NewProxy(&app, &watcher)
 	proxy.Port = pxyPort

@@ -119,7 +119,7 @@ func (this *App) Start(build bool) error {
 			}
 		}
 
-		this.startErr = this.Run()
+		this.startErr = this.Run(this.Port)
 		if this.startErr != nil {
 			this.startErr = errors.New("Fail to run " + this.Name)
 			this.BuildStart = &sync.Once{}
@@ -160,7 +160,7 @@ func (this *App) BinFile(args ...string) (f string) {
 }
 
 func (this *App) Stop(port string, args ...string) {
-	if this.IsRunning() {
+	if this.IsRunning(port) {
 		fmt.Println("== Stopping " + this.Name)
 		cmd := this.GetCmd(port)
 		cmd.Process.Kill()
@@ -202,19 +202,16 @@ func (this *App) SetCmd(port string, cmd *exec.Cmd) {
 	this.Cmds[port] = cmd
 }
 
-func (this *App) Run(args ...string) (err error) {
+func (this *App) Run(port string) (err error) {
 	bin := this.BinFile()
 	_, err = os.Stat(bin)
 	if err != nil {
 		return
 	}
-	var port string
-	if len(args) > 0 {
-		port = args[0]
-	} else {
-		port = this.UseRandPort()
-	}
 	fmt.Println("== Running at port " + port + ": " + this.Name)
+	if this.Port != port {
+		this.SwitchToNewPort = true
+	}
 	this.Port = port //记录被使用的端口，避免下次使用
 	var cmd *exec.Cmd
 	/*
